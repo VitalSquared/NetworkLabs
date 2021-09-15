@@ -1,5 +1,6 @@
 bin/
 build/
+.idea
 .gradle
 .gradletasknamecache
 gradle-app.setting
