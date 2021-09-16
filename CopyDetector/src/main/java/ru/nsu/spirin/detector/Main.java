@@ -15,15 +15,16 @@ public class Main {
         }
 
         String multicastIP = args[0];
-        int port = convertArgumentToInteger(args, 1, DEFAULT_PORT);
-        int workTimeMillis = convertArgumentToInteger(args, 2, DEFAULT_WORK_TIME_MILLIS);
-        int timeoutMillis = convertArgumentToInteger(args, 3, DEFAULT_TIMEOUT_MILLIS);
-        int messageIntervalMillis = convertArgumentToInteger(args, 4, DEFAULT_MESSAGE_INTERVAL_MILLIS);
+        int port = convertArgumentToInteger(args, 1, DEFAULT_PORT, 0, Integer.MAX_VALUE);
+        int workTimeMillis = convertArgumentToInteger(args, 2, DEFAULT_WORK_TIME_MILLIS, 0, Integer.MAX_VALUE);
+        int timeoutMillis = convertArgumentToInteger(args, 3, DEFAULT_TIMEOUT_MILLIS, 0, Integer.MAX_VALUE);
+        int messageIntervalMillis = convertArgumentToInteger(args, 4, DEFAULT_MESSAGE_INTERVAL_MILLIS, 0, Integer.MAX_VALUE);
 
         try {
             InetAddress address = InetAddress.getByName(multicastIP);
             if (!address.isMulticastAddress()) {
-                System.err.println("Specified address is not multicast");
+                System.err.printf("Specified address is not multicast: %s", multicastIP);
+                return;
             }
 
             Detector detector = new Detector(address, port, messageIntervalMillis, timeoutMillis, workTimeMillis);
@@ -34,14 +35,18 @@ public class Main {
         }
     }
 
-    private static int convertArgumentToInteger(String[] args, int index, int defaultValue) {
+    private static int convertArgumentToInteger(String[] args, int index, int defaultValue, int minValue, int maxValue) {
         try {
             if (index < args.length) {
-                return Integer.parseInt(args[index]);
+                int value = Integer.parseInt(args[index]);
+                if (minValue <= value && value <= maxValue) {
+                    return value;
+                }
+                System.err.printf("Converted number {%d} is not in range [%d, %d]. Defaulting to {%d}\n", value, minValue, maxValue, defaultValue);
             }
         }
         catch (NumberFormatException numberFormatException) {
-            System.err.println("Unable to convert {" + args[index] + "} to integer. Defaulting to {" + defaultValue + "}");
+            System.err.printf("Unable to convert {%s} to integer. Defaulting to {%d}\n", args[index], defaultValue);
         }
         return defaultValue;
     }

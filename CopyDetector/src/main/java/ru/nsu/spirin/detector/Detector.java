@@ -1,5 +1,8 @@
 package ru.nsu.spirin.detector;
 
+import lombok.NonNull;
+import lombok.RequiredArgsConstructor;
+
 import java.io.IOException;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
@@ -8,11 +11,13 @@ import java.net.MulticastSocket;
 import java.net.SocketTimeoutException;
 import java.util.HashMap;
 
+@RequiredArgsConstructor()
 public final class Detector {
-    private static final int BUF_SIZE = 1024;
+    private static final int    BUF_SIZE        = 1024;
     private static final String DEFAULT_MESSAGE = "";
 
-    private final InetAddress address;
+    private final @NonNull InetAddress address;
+
     private final int port;
     private final int messageIntervalMillis;
     private final int timeoutMillis;
@@ -22,17 +27,8 @@ public final class Detector {
 
     private long startTimeMillis;
 
-    public Detector(InetAddress address, int port, int messageIntervalMillis, int timeoutMillis, int workTimeMillis) {
-        this.address = address;
-        this.port = port;
-        this.messageIntervalMillis = messageIntervalMillis;
-        this.timeoutMillis = timeoutMillis;
-        this.workTimeMillis = workTimeMillis;
-    }
-
     public void run() throws IOException {
         this.startTimeMillis = System.currentTimeMillis();
-
         MulticastSocket receiveSocket = new MulticastSocket(this.port);
         DatagramSocket sendSocket = new DatagramSocket();
         byte[] buffer = new byte[BUF_SIZE];
@@ -64,6 +60,8 @@ public final class Detector {
                     printAliveCopies();
                 }
             }
+
+            receiveSocket.leaveGroup(this.address);
         }
         catch (IOException exception) {
             exception.printStackTrace();
@@ -82,7 +80,7 @@ public final class Detector {
 
     private void removeUnavailableConnections(long currentTimeMillis) {
         boolean removedAny = false;
-        for (var it = this.connections.entrySet().iterator(); it.hasNext();) {
+        for (var it = this.connections.entrySet().iterator(); it.hasNext(); ) {
             var entry = it.next();
             if (currentTimeMillis - entry.getValue() > this.timeoutMillis) {
                 it.remove();
@@ -96,8 +94,7 @@ public final class Detector {
 
     private void printAliveCopies() {
         System.out.println("List of alive copies: ");
-        for (var it = this.connections.entrySet().iterator(); it.hasNext();) {
-            var entry = it.next();
+        for (var entry : this.connections.entrySet()) {
             System.out.println(entry.getKey());
         }
     }
