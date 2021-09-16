@@ -4,17 +4,18 @@ import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
 
 import java.io.IOException;
+import java.io.InvalidObjectException;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
 import java.net.MulticastSocket;
 import java.net.SocketTimeoutException;
 import java.util.HashMap;
+import java.util.UUID;
 
-@RequiredArgsConstructor()
+@RequiredArgsConstructor
 public final class Detector {
-    private static final int    BUF_SIZE        = 1024;
-    private static final String DEFAULT_MESSAGE = "";
+    private static final String UUID_NAME = "COPY_DETECTOR";
 
     private final @NonNull InetAddress address;
 
@@ -28,23 +29,28 @@ public final class Detector {
     private long startTimeMillis;
 
     public void run() throws IOException {
+        UUID uuid = UUID.nameUUIDFromBytes(UUID_NAME.getBytes());
+
         this.startTimeMillis = System.currentTimeMillis();
         MulticastSocket receiveSocket = new MulticastSocket(this.port);
         DatagramSocket sendSocket = new DatagramSocket();
-        byte[] buffer = new byte[BUF_SIZE];
+        byte[] buffer = new byte[uuid.toString().length()];
 
         try (receiveSocket; sendSocket) {
             receiveSocket.setSoTimeout(this.messageIntervalMillis);
             receiveSocket.joinGroup(this.address);
 
             while (shouldWork()) {
-                sendMessage(sendSocket);
+                sendMessage(sendSocket, uuid);
 
                 DatagramPacket packet = new DatagramPacket(buffer, buffer.length);
                 try {
                     receiveSocket.receive(packet);
+                    if (!isDataValid(packet.getData(), uuid)) {
+                        throw new InvalidObjectException("");
+                    }
                 }
-                catch (SocketTimeoutException socketTimeoutException) {
+                catch (SocketTimeoutException | InvalidObjectException socketTimeoutException) {
                     removeUnavailableConnections(System.currentTimeMillis());
                     continue;
                 }
@@ -72,8 +78,12 @@ public final class Detector {
         return workTimeMillis >= (System.currentTimeMillis() - startTimeMillis);
     }
 
-    private void sendMessage(DatagramSocket socket) throws IOException {
-        byte[] buffer = DEFAULT_MESSAGE.getBytes();
+    private boolean isDataValid(byte[] data, UUID uuid) {
+        return uuid.equals(UUID.fromString(new String(data)));
+    }
+
+    private void sendMessage(DatagramSocket socket, UUID uuid) throws IOException {
+        byte[] buffer = uuid.toString().getBytes();
         DatagramPacket packet = new DatagramPacket(buffer, buffer.length, this.address, this.port);
         socket.send(packet);
     }

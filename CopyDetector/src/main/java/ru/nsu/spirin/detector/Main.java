@@ -8,6 +8,12 @@ public class Main {
     private static final int DEFAULT_MESSAGE_INTERVAL_MILLIS = 250;
     private static final int DEFAULT_WORK_TIME_MILLIS = 8000;
 
+    private static final int MIN_PORT = 0;
+    private static final int MAX_PORT = 0xFFFF;
+
+    private static final int MIN_TIME_MILLIS = 0;
+    private static final int MAX_TIME_MILLIS = Integer.MAX_VALUE;
+
     public static void main(String[] args) {
         if (0 == args.length) {
             System.out.println("params: multicast_ip [port=2050] [work_time_millis=8000] [timeout_of_others_millis=500] [message_wait_interval_millis=250]");
@@ -15,10 +21,10 @@ public class Main {
         }
 
         String multicastIP = args[0];
-        int port = convertArgumentToInteger(args, 1, DEFAULT_PORT, 0, Integer.MAX_VALUE);
-        int workTimeMillis = convertArgumentToInteger(args, 2, DEFAULT_WORK_TIME_MILLIS, 0, Integer.MAX_VALUE);
-        int timeoutMillis = convertArgumentToInteger(args, 3, DEFAULT_TIMEOUT_MILLIS, 0, Integer.MAX_VALUE);
-        int messageIntervalMillis = convertArgumentToInteger(args, 4, DEFAULT_MESSAGE_INTERVAL_MILLIS, 0, Integer.MAX_VALUE);
+        int port = convertArgumentToInteger(args, 1, DEFAULT_PORT, MIN_PORT, MAX_PORT);
+        int workTimeMillis = convertArgumentToInteger(args, 2, DEFAULT_WORK_TIME_MILLIS, MIN_TIME_MILLIS, MAX_TIME_MILLIS);
+        int timeoutMillis = convertArgumentToInteger(args, 3, DEFAULT_TIMEOUT_MILLIS, MIN_TIME_MILLIS, MAX_TIME_MILLIS);
+        int messageIntervalMillis = convertArgumentToInteger(args, 4, DEFAULT_MESSAGE_INTERVAL_MILLIS, MIN_TIME_MILLIS, MAX_TIME_MILLIS);
 
         try {
             InetAddress address = InetAddress.getByName(multicastIP);
