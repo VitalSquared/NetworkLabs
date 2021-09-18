@@ -45,22 +45,22 @@ public final class Main {
 
     private static void runClient(String[] args) {
         if (4 > args.length) {
-            System.err.println("args: --client file_path server_ip port");
+            System.err.println("args: --client file_name server_ip port");
             return;
         }
 
-        String filePath = args[1];
+        String fileName = args[1];
         String serverIP = args[2];
         int port = convertArgumentToInteger(args, 3, DEFAULT_PORT, MIN_PORT, MAX_PORT);
 
-        Path file;
+        Path path = getFilePath(fileName);
+        if (null == path) {
+            System.err.printf("File doesn't exist: %s\n", fileName);
+            return;
+        }
+
         InetAddress address;
         try {
-            file = getFilePath(filePath);
-            if (file == null) {
-                System.err.printf("File doesn't exist: %s\n", filePath);
-                return;
-            }
             address = InetAddress.getByName(serverIP);
         }
         catch (UnknownHostException exception) {
@@ -68,7 +68,7 @@ public final class Main {
             return;
         }
 
-        Client client = new Client(file, address, port);
+        Client client = new Client(path, address, port);
         client.run();
     }
 
@@ -88,8 +88,8 @@ public final class Main {
         return defaultValue;
     }
 
-    private static Path getFilePath(String pathStr) {
-        Path path = Paths.get(pathStr);
+    private static Path getFilePath(String fileName) {
+        Path path = Paths.get(fileName);
         return Files.exists(path) ? path : null;
     }
 }

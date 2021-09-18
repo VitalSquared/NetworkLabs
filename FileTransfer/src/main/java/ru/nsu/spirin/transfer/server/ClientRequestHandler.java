@@ -28,7 +28,7 @@ public class ClientRequestHandler implements Runnable {
                 this.socket) {
 
             String fileName = getFileName(clientReader, clientWriter);
-            if (fileName == null) {
+            if (null == fileName) {
                 return;
             }
             sendFeedback(clientWriter, ResponseCode.SUCCESS_FILENAME_TRANSFER);
@@ -56,17 +56,15 @@ public class ClientRequestHandler implements Runnable {
 
     private long getFileContent(Path path, long fileSize, DataInputStream clientReader) {
         byte[] buffer = new byte[BUF_SIZE];
-        long curBytesRead = 0;
-        long prevBytesRead = 0;
+        long curBytesRead = 0, prevBytesRead = 0;
         long startTime = System.currentTimeMillis();
-        long curTime = startTime;
-        long lastTime = startTime;
-        boolean activeLessThanRequired = true;
+        long curTime, lastTime = startTime;
+        boolean activeLessThanSpeedTestInterval = true;
 
         try (OutputStream fileWriter = Files.newOutputStream(path)) {
             while (curBytesRead < fileSize) {
                 int bytesRead;
-                if ((bytesRead = clientReader.read(buffer, 0, BUF_SIZE)) >= 0) {
+                if (0 < (bytesRead = clientReader.read(buffer, 0, BUF_SIZE))) {
                     fileWriter.write(buffer, 0, bytesRead);
                 }
                 curBytesRead += bytesRead;
@@ -77,11 +75,11 @@ public class ClientRequestHandler implements Runnable {
                     long avgSpeed = curBytesRead * 1000 / (curTime - startTime);
                     System.out.println("File transfer {" + path.getFileName() + "} has current speed = " + curSpeed + " bytes/s, avg speed = " + avgSpeed + " bytes/s");
                     lastTime = curTime;
-                    activeLessThanRequired = false;
+                    activeLessThanSpeedTestInterval = false;
                     prevBytesRead = curBytesRead;
                 }
             }
-            if (activeLessThanRequired) {
+            if (activeLessThanSpeedTestInterval) {
                 long speed = curBytesRead * 1000 / (System.currentTimeMillis() - lastTime);
                 System.out.println("File transfer {" + path.getFileName() + "} had speed = " + speed + " bytes/s");
             }
@@ -94,16 +92,19 @@ public class ClientRequestHandler implements Runnable {
     }
 
     private Path createFile(String fileName) throws IOException {
-        Path dirPath = Paths.get(FILE_STORAGE_FOLDER);
-        if (!Files.exists(dirPath)) {
-            Files.createDirectory(dirPath);
+        Path storagePath = Paths.get(FILE_STORAGE_FOLDER);
+        if (!Files.exists(storagePath)) {
+            Files.createDirectory(storagePath);
         }
-        Path path = Paths.get(dirPath + System.getProperty("file.separator") + fileName);
-        if (Files.exists(path)) {
-            path = Paths.get(dirPath + System.getProperty("file.separator") + generateRandomFileName(fileName));
+
+        String separator = System.getProperty("file.separator");
+        Path filePath = Paths.get(storagePath + separator + fileName);
+        if (Files.exists(filePath)) {
+            filePath = Paths.get(filePath + separator + generateRandomFileName(fileName));
         }
-        Files.createFile(path);
-        return path;
+
+        Files.createFile(filePath);
+        return filePath;
     }
 
     private String generateRandomFileName(String fileName) {

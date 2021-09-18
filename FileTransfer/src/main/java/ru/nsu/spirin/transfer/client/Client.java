@@ -47,8 +47,8 @@ public final class Client {
         socketWriter.writeUTF(fileName);
         socketWriter.flush();
 
-        ResponseCode filenameTransfer = ResponseCode.getResponseByCode(socketReader.readInt());
-        if (filenameTransfer == ResponseCode.FAILURE_FILENAME_TRANSFER) {
+        ResponseCode nameTransfer = ResponseCode.getResponseByCode(socketReader.readInt());
+        if (ResponseCode.FAILURE_FILENAME_TRANSFER == nameTransfer) {
             System.out.println("Failed to transfer file name!");
             return false;
         }
@@ -65,13 +65,13 @@ public final class Client {
         byte[] buffer = new byte[BUF_SIZE];
         int lineSize;
 
-        while ((lineSize = fileReader.read(buffer, 0, BUF_SIZE)) > 0) {
+        while (0 < (lineSize = fileReader.read(buffer, 0, BUF_SIZE))) {
             socketWriter.write(buffer, 0, lineSize);
             socketWriter.flush();
         }
 
-        ResponseCode fileTransferResponse = ResponseCode.getResponseByCode(socketReader.readInt());
-        if (fileTransferResponse == ResponseCode.FAILURE_FILE_TRANSFER) {
+        ResponseCode contentTransfer = ResponseCode.getResponseByCode(socketReader.readInt());
+        if (ResponseCode.FAILURE_FILE_TRANSFER == contentTransfer) {
             System.out.println("Failed to transfer file!");
         }
     }
