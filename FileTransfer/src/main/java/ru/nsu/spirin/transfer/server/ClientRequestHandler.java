@@ -39,7 +39,7 @@ public class ClientRequestHandler implements Runnable {
             sendFeedback(clientWriter, receivedSize == fileSize ? ResponseCode.SUCCESS_FILENAME_TRANSFER : ResponseCode.FAILURE_FILE_TRANSFER);
         }
         catch (IOException exception) {
-            exception.printStackTrace();
+            System.err.printf("Failed to get file: %s\n", exception.getLocalizedMessage());
         }
     }
 
@@ -47,7 +47,7 @@ public class ClientRequestHandler implements Runnable {
         int fileNameSize = clientReader.readInt();
         String fileName = clientReader.readUTF();
         if (fileNameSize != fileName.length()) {
-            System.out.println("File name length does not match with original!");
+            System.out.println("Failed to get file: File name length does not match with original!");
             sendFeedback(clientWriter, ResponseCode.FAILURE_FILENAME_TRANSFER);
             return null;
         }
@@ -85,9 +85,11 @@ public class ClientRequestHandler implements Runnable {
             }
         }
         catch (IOException exception) {
-            exception.printStackTrace();
+            System.err.printf("Failed to get file: %s\n", exception.getLocalizedMessage());
+            return -1;
         }
 
+        System.out.printf("Successfully received file: %s\n", path.getFileName());
         return curBytesRead;
     }
 

@@ -33,11 +33,8 @@ public final class Client {
             sendFileSize(socketWriter);
             sendFileContent(fileReader, socketReader, socketWriter);
         }
-        catch (IOException exception) {
-            exception.printStackTrace();
-        }
-        catch (UnknownResponseCodeException exception) {
-            System.out.println("Unknown code from server: " + exception.getLocalizedMessage());
+        catch (IOException | UnknownResponseCodeException exception) {
+            System.err.printf("Unable to transfer file: %s\n", exception.getLocalizedMessage());
         }
     }
 
@@ -49,7 +46,7 @@ public final class Client {
 
         ResponseCode nameTransfer = ResponseCode.getResponseByCode(socketReader.readInt());
         if (ResponseCode.FAILURE_FILENAME_TRANSFER == nameTransfer) {
-            System.out.println("Failed to transfer file name!");
+            System.err.println("Error while sending file: Failed to transfer file name!");
             return false;
         }
         return true;
@@ -72,7 +69,9 @@ public final class Client {
 
         ResponseCode contentTransfer = ResponseCode.getResponseByCode(socketReader.readInt());
         if (ResponseCode.FAILURE_FILE_TRANSFER == contentTransfer) {
-            System.out.println("Failed to transfer file!");
+            System.err.println("Error while sending file: Failed to transfer file content!");
+            return;
         }
+        System.out.printf("Successfully transferred file: %s\n", path.getFileName());
     }
 }
