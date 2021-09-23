@@ -1,6 +1,7 @@
 package ru.nsu.spirin.transfer.client;
 
 import lombok.RequiredArgsConstructor;
+import org.apache.log4j.Logger;
 import ru.nsu.spirin.transfer.exceptions.UnknownResponseCodeException;
 import ru.nsu.spirin.transfer.protocol.ResponseCode;
 
@@ -15,6 +16,8 @@ import java.nio.file.Path;
 
 @RequiredArgsConstructor
 public final class Client {
+    private static final Logger logger   = Logger.getLogger(Client.class);
+
     private static final int BUF_SIZE = 1024;
 
     private final Path path;
@@ -34,7 +37,7 @@ public final class Client {
             sendFileContent(fileReader, socketReader, socketWriter);
         }
         catch (IOException | UnknownResponseCodeException exception) {
-            System.err.printf("Unable to transfer file: %s\n", exception.getLocalizedMessage());
+            logger.info("Unable to transfer file {" + this.path.getFileName() + "}: " + exception.getLocalizedMessage());
         }
     }
 
@@ -46,7 +49,7 @@ public final class Client {
 
         ResponseCode nameTransfer = ResponseCode.getResponseByCode(socketReader.readInt());
         if (ResponseCode.FAILURE_FILENAME_TRANSFER == nameTransfer) {
-            System.err.println("Error while sending file: Failed to transfer file name!");
+            logger.info(String.format("Error while sending file {%s}: Failed to transfer file name!", this.path.getFileName()));
             return false;
         }
         return true;
@@ -60,18 +63,18 @@ public final class Client {
 
     private void sendFileContent(InputStream fileReader, DataInputStream socketReader, DataOutputStream socketWriter) throws IOException, UnknownResponseCodeException {
         byte[] buffer = new byte[BUF_SIZE];
-        int lineSize;
+        int bytesRead;
 
-        while (0 < (lineSize = fileReader.read(buffer, 0, BUF_SIZE))) {
-            socketWriter.write(buffer, 0, lineSize);
+        while (0 < (bytesRead = fileReader.read(buffer, 0, BUF_SIZE))) {
+            socketWriter.write(buffer, 0, bytesRead);
             socketWriter.flush();
         }
 
         ResponseCode contentTransfer = ResponseCode.getResponseByCode(socketReader.readInt());
         if (ResponseCode.FAILURE_FILE_TRANSFER == contentTransfer) {
-            System.err.println("Error while sending file: Failed to transfer file content!");
+            logger.info(String.format("Error while sending file {%s}: Failed to transfer file content!", this.path.getFileName()));
             return;
         }
-        System.out.printf("Successfully transferred file: %s\n", path.getFileName());
+        logger.info("Successfully transferred file: " + path.getFileName());
     }
 }

@@ -1,5 +1,6 @@
 package ru.nsu.spirin.transfer;
 
+import org.apache.log4j.Logger;
 import ru.nsu.spirin.transfer.client.Client;
 import ru.nsu.spirin.transfer.server.Server;
 
@@ -10,6 +11,8 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 
 public final class Main {
+    private static final Logger logger = Logger.getLogger(Main.class);
+
     private static final int DEFAULT_PORT = 2050;
     private static final int MIN_PORT = 0;
     private static final int MAX_PORT = 0xFFFF;
@@ -20,20 +23,20 @@ public final class Main {
 
     public static void main(String[] args) {
         if (0 == args.length) {
-            System.err.println("[1] args: --server port [backlog=5]");
-            System.err.println("[2] args: --client file_path server_ip port");
+            logger.error("[1] args: --server port [backlog=5]");
+            logger.error("[2] args: --client file_name server_ip port");
             return;
         }
         switch (args[0]) {
             case "--server" -> runServer(args);
             case "--client" -> runClient(args);
-            default -> System.err.printf("First arg is not '--server' or '--client': %s\n", args[0]);
+            default -> logger.error("First arg is not '--server' or '--client': " + args[0]);
         }
     }
 
     private static void runServer(String[] args) {
         if (2 > args.length) {
-            System.err.println("args: --server port [backlog=5]");
+            logger.error("args: --server port [backlog=5]");
             return;
         }
 
@@ -45,7 +48,7 @@ public final class Main {
 
     private static void runClient(String[] args) {
         if (4 > args.length) {
-            System.err.println("args: --client file_name server_ip port");
+            logger.error("args: --client file_name server_ip port");
             return;
         }
 
@@ -55,7 +58,7 @@ public final class Main {
 
         Path path = getFilePath(fileName);
         if (null == path) {
-            System.err.printf("File doesn't exist: %s\n", fileName);
+            logger.error("File doesn't exist: " + fileName);
             return;
         }
 
@@ -64,7 +67,7 @@ public final class Main {
             address = InetAddress.getByName(serverIP);
         }
         catch (UnknownHostException exception) {
-            System.err.printf("Unable to connect to %s: %s\n", serverIP, exception.getLocalizedMessage());
+            logger.error("Unable to connect to {" + serverIP + "}: " + exception.getLocalizedMessage());
             return;
         }
 
@@ -74,16 +77,18 @@ public final class Main {
 
     private static int convertArgumentToInteger(String[] args, int index, int defaultValue, int minValue, int maxValue) {
         try {
-            if (index < args.length) {
-                int value = Integer.parseInt(args[index]);
-                if (minValue <= value && value <= maxValue) {
-                    return value;
-                }
-                System.err.printf("Converted number {%d} is not in range [%d, %d]. Defaulting to {%d}\n", value, minValue, maxValue, defaultValue);
+            if (index >= args.length) {
+                logger.info(String.format("Argument no. %d doesn't exist. Defaulting to {%d}", index + 1, defaultValue));
+                return defaultValue;
             }
+            int value = Integer.parseInt(args[index]);
+            if (minValue <= value && value <= maxValue) {
+                return value;
+            }
+            logger.error(String.format("Converted number {%d} is not in range [%d, %d]. Defaulting to {%d}", value, minValue, maxValue, defaultValue));
         }
         catch (NumberFormatException numberFormatException) {
-            System.err.printf("Unable to convert {%s} to integer. Defaulting to {%d}\n", args[index], defaultValue);
+            logger.error(String.format("Unable to convert {%s} to integer. Defaulting to {%d}", args[index], defaultValue));
         }
         return defaultValue;
     }
