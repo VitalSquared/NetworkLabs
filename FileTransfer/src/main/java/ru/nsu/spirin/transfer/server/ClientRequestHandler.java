@@ -106,7 +106,7 @@ public class ClientRequestHandler implements Runnable {
         String separator = System.getProperty("file.separator");
         Path filePath = Paths.get(storagePath + separator + fileName);
         if (Files.exists(filePath)) {
-            filePath = Paths.get(filePath + separator + generateRandomFileName(fileName));
+            filePath = Paths.get(storagePath + separator + generateRandomFileName(fileName));
         }
 
         Files.createFile(filePath);
@@ -114,7 +114,10 @@ public class ClientRequestHandler implements Runnable {
     }
 
     private String generateRandomFileName(String fileName) {
-        return fileName + "_" + UUID.randomUUID();
+        int dotIndex = fileName.lastIndexOf('.');
+        String name = (dotIndex == -1) ? fileName : fileName.substring(0, dotIndex);
+        String extension = (dotIndex == -1) ? "" : fileName.substring(dotIndex);
+        return name + "_" + UUID.randomUUID() + extension;
     }
 
     private void sendFeedback(DataOutputStream writer, ResponseCode responseCode) throws IOException {
