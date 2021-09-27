@@ -22,14 +22,19 @@ public class Server {
         try (ServerSocket serverSocket = new ServerSocket(this.port, this.backlog)) {
             logger.info("Server started with port = " + this.port);
             while (!serverSocket.isClosed()) {
-                Socket newConnection = serverSocket.accept();
-                logger.info("Client connected: " + newConnection.getInetAddress() + ":" + newConnection.getPort());
-                threadPool.submit(new ClientRequestHandler(newConnection));
+                Socket clientSocket = serverSocket.accept();
+                String clientID = createClientID(clientSocket);
+                logger.info("[Server] Client connected: [" + clientID + "]");
+                threadPool.submit(new ClientRequestHandler(clientSocket, clientID));
             }
         }
         catch (IOException exception) {
-            logger.error(exception.getLocalizedMessage());
+            logger.error("[Server] " + exception.getLocalizedMessage());
         }
         threadPool.shutdown();
+    }
+
+    public String createClientID(Socket clientSocket) {
+        return clientSocket.getInetAddress() + ":" + clientSocket.getPort();
     }
 }

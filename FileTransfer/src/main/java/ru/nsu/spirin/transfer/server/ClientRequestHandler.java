@@ -23,6 +23,7 @@ public class ClientRequestHandler implements Runnable {
     private static final String FILE_STORAGE_FOLDER = "uploads";
 
     private final Socket socket;
+    private final String clientID;
 
     @Override
     public void run() {
@@ -43,7 +44,7 @@ public class ClientRequestHandler implements Runnable {
             sendFeedback(clientWriter, receivedSize == fileSize ? ResponseCode.SUCCESS_FILENAME_TRANSFER : ResponseCode.FAILURE_FILE_TRANSFER);
         }
         catch (IOException exception) {
-            logger.info("Failed to get file: " + exception.getLocalizedMessage());
+            logInfo("Failed to get file: " + exception.getLocalizedMessage());
         }
     }
 
@@ -51,7 +52,7 @@ public class ClientRequestHandler implements Runnable {
         int fileNameSize = clientReader.readInt();
         String fileName = clientReader.readUTF();
         if (fileNameSize != fileName.length()) {
-            logger.info("Failed to get file: File name length does not match with original!");
+            logInfo("Failed to get file: File name length does not match with original!");
             sendFeedback(clientWriter, ResponseCode.FAILURE_FILENAME_TRANSFER);
             return null;
         }
@@ -77,7 +78,7 @@ public class ClientRequestHandler implements Runnable {
                 if (SPEED_TEST_INTERVAL_MILLIS < (curTime - lastTime)) {
                     long curSpeed = (curBytesRead - prevBytesRead) * 1000 / (curTime - lastTime);
                     long avgSpeed = curBytesRead * 1000 / (curTime - startTime);
-                    logger.info("Transfer of file {" + path.getFileName() + "} has current speed = " + curSpeed + " bytes/s, avg speed = " + avgSpeed + " bytes/s");
+                    logInfo("Transfer of file {" + path.getFileName() + "} has current speed = " + curSpeed + " bytes/s, avg speed = " + avgSpeed + " bytes/s");
                     lastTime = curTime;
                     activeLessThanSpeedTestInterval = false;
                     prevBytesRead = curBytesRead;
@@ -85,15 +86,15 @@ public class ClientRequestHandler implements Runnable {
             }
             if (activeLessThanSpeedTestInterval) {
                 long speed = curBytesRead * 1000 / (System.currentTimeMillis() - lastTime);
-                logger.info("Transfer of file {" + path.getFileName() + "} had speed = " + speed + " bytes/s");
+                logInfo("Transfer of file {" + path.getFileName() + "} had speed = " + speed + " bytes/s");
             }
         }
         catch (IOException exception) {
-            logger.info("Failed to get file: " + exception.getLocalizedMessage());
+            logInfo("Failed to get file: " + exception.getLocalizedMessage());
             return -1;
         }
 
-        logger.info("Successfully received file: " + path.getFileName());
+        logInfo("Successfully received file: " + path.getFileName());
         return curBytesRead;
     }
 
@@ -123,5 +124,9 @@ public class ClientRequestHandler implements Runnable {
     private void sendFeedback(DataOutputStream writer, ResponseCode responseCode) throws IOException {
         writer.writeInt(responseCode.getCode());
         writer.flush();
+    }
+
+    private void logInfo(String message) {
+        logger.info("[" + this.clientID + "] " + message);
     }
 }
