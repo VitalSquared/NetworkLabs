@@ -1,0 +1,27 @@
+plugins {
+    id 'java'
+    id 'application'
+}
+
+group 'ru.nsu.spirin'
+version '1.0'
+
+application {
+    mainClassName = 'ru.nsu.spirin.async.Main'
+}
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    implementation 'org.projectlombok:lombok:1.18.20'
+    implementation 'com.squareup.okhttp3:okhttp:4.9.2'
+    implementation group: 'com.fasterxml.jackson.core', name: 'jackson-databind', version: '2.0.1'
+    annotationProcessor 'org.projectlombok:lombok:1.18.20'
+    implementation 'log4j:log4j:1.2.17'
+}
+
+test {
+    useJUnitPlatform()
+}
