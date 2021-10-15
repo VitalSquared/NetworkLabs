@@ -11,8 +11,10 @@ public final class Weather {
     private @Getter @Setter @JsonProperty("main") WeatherParameters    parameters;
     private @Getter @Setter @JsonProperty("visibility") int visibility;
     private @Getter @Setter @JsonProperty("wind") Wind wind;
+    private @Getter @Setter @JsonProperty("clouds") Clouds clouds;
 
     public static final class GeneralWeather {
+        private @Getter @Setter @JsonProperty("main") String main;
         private @Getter @Setter @JsonProperty("description") String description;
     }
 
@@ -58,5 +60,9 @@ public final class Weather {
                 return this.text;
             }
         }
+    }
+
+    public static final class Clouds {
+        private @Getter @Setter @JsonProperty("all") int clouds;
     }
 }

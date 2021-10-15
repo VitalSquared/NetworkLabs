@@ -6,15 +6,18 @@ import okhttp3.Response;
 import org.apache.log4j.Logger;
 
 public final class APIRequestGenerator {
-    public static final int MIN_ENTRIES_LIMIT = 1;
-    public static final int MAX_ENTRIES_LIMIT = 10;
+    public static final int MIN_ADDRESSES_NUMBER = 1;
+    public static final int MAX_ADDRESSES_NUMBER = 15;
+
+    public static final int MIN_FEATURES_NUMBER = 1;
+    public static final int MAX_FEATURES_NUMBER = 25;
 
     public static final int MIN_RADIUS_METERS = 100;
     public static final int MAX_RADIUS_METERS = 10000;
 
-    private static final Logger logger = Logger.getLogger(APIRequestGenerator.class);
-
     private static final String REQUEST_LANGUAGE = "ru";
+
+    private static final Logger logger = Logger.getLogger(APIRequestGenerator.class);
 
     private static final String GEO_API_KEY = "e05c4b44-b78e-4dce-ad43-0183607d5610";
     private static final String OTM_API_KEY = "5ae2e3f221c38a28845f05b6be4a37dab9dfb1e566d9e74817be9d50";
@@ -26,7 +29,7 @@ public final class APIRequestGenerator {
         String url = String.format(
                 "https://graphhopper.com/api/1/geocode?q=%s&limit=%d&locale=%s&debug=true&key=%s",
                 address.toLowerCase(),
-                clampValue(countLimit, MIN_ENTRIES_LIMIT, MAX_ENTRIES_LIMIT),
+                clampValue(countLimit, MIN_ADDRESSES_NUMBER, MAX_ADDRESSES_NUMBER),
                 REQUEST_LANGUAGE,
                 GEO_API_KEY);
         return new Request.Builder().url(url).get().build();
@@ -40,7 +43,7 @@ public final class APIRequestGenerator {
                 clampValue(radius, MIN_RADIUS_METERS, MAX_RADIUS_METERS) + ".0",
                 position.getLongitudeAsString(),
                 position.getLatitudeAsString(),
-                clampValue(countLimit, MIN_ENTRIES_LIMIT, MAX_ENTRIES_LIMIT), OTM_API_KEY);
+                clampValue(countLimit, MIN_FEATURES_NUMBER, MAX_FEATURES_NUMBER), OTM_API_KEY);
         return new Request.Builder().url(url).get().build();
     }
 
@@ -68,8 +71,8 @@ public final class APIRequestGenerator {
         try {
             response = httpClient.newCall(request).execute();
         }
-        catch (Exception e) {
-            logger.error(e.getLocalizedMessage());
+        catch (Exception exception) {
+            logger.error(exception.getLocalizedMessage());
             response = null;
         }
         return response;

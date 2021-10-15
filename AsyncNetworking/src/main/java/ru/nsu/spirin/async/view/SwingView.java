@@ -15,16 +15,18 @@ import javax.swing.JButton;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
+import javax.swing.SwingConstants;
 import javax.swing.WindowConstants;
 import java.awt.BorderLayout;
 import java.awt.Dimension;
-import java.awt.GridLayout;
-import java.io.IOException;
 import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 public final class SwingView {
+
     private static final Logger logger = Logger.getLogger(SwingView.class);
 
     private static final String WINDOW_TITLE = "Location Viewer";
@@ -32,7 +34,7 @@ public final class SwingView {
 
     private final JFrame gameFrame;
 
-    private final JPanel addressListPanel;
+    private final AddressListPanel addressListPanel;
     private final WeatherPanel weatherPanel;
     private final FeaturesPanel featuresPanel;
 
@@ -41,42 +43,46 @@ public final class SwingView {
         this.gameFrame.setSize(OUTER_FRAME_DIMENSION);
         this.gameFrame.setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE);
 
-        JPanel mainPanel = new JPanel(new GridLayout(1, 2));
-
-        JPanel leftPanel = new JPanel(new BorderLayout());
-        JPanel rightPanel = new JPanel(new BorderLayout());
-
-        mainPanel.add(leftPanel, BorderLayout.WEST);
-        mainPanel.add(rightPanel, BorderLayout.EAST);
-
-        AddressInputPanel addressInputPanel = new AddressInputPanel(this);
-        this.addressListPanel = new JPanel(new GridLayout(5, 1));
+        this.addressListPanel = new AddressListPanel();
         this.weatherPanel = new WeatherPanel();
-
-        JPanel leftBottomPanel = new JPanel(new GridLayout(2, 1));
-
-        leftBottomPanel.add(this.addressListPanel);
-        leftBottomPanel.add(this.weatherPanel);
-
-        leftPanel.add(addressInputPanel, BorderLayout.NORTH);
-        leftPanel.add(leftBottomPanel, BorderLayout.CENTER);
-
         this.featuresPanel = new FeaturesPanel();
 
-        rightPanel.add(this.featuresPanel);
+        JPanel mainPanel = new JPanel(new BorderLayout(25, 0));
+        JPanel leftPanel = createLeftPanel();
+        JPanel rightPanel = createRightPanel();
+
+        mainPanel.add(leftPanel, BorderLayout.WEST);
+        mainPanel.add(rightPanel, BorderLayout.CENTER);
 
         this.gameFrame.add(mainPanel);
         this.gameFrame.setVisible(true);
     }
 
-    public void startAddressesSearchHttpRequest(String address) {
+    private JPanel createLeftPanel() {
+        AddressInputPanel addressInputPanel = new AddressInputPanel(this);
+
+        JPanel leftPanel = new JPanel(new BorderLayout(0, 25));
+        leftPanel.add(addressInputPanel, BorderLayout.NORTH);
+        leftPanel.add(this.addressListPanel, BorderLayout.CENTER);
+
+        return leftPanel;
+    }
+
+    private JPanel createRightPanel() {
+        JPanel rightPanel = new JPanel(new BorderLayout(0, 25));
+        rightPanel.add(this.weatherPanel, BorderLayout.NORTH);
+        rightPanel.add(this.featuresPanel, BorderLayout.CENTER);
+        return rightPanel;
+    }
+
+    public void startAddressesSearchHttpRequest(String address, int maxAddressesNumber, int maxFeaturesNumber, int radius) {
         CompletableFuture.supplyAsync(() -> {
-            addressListPanel.removeAll();
+            addressListPanel.clearAll();
             weatherPanel.updateWeather(null);
             featuresPanel.updateFeatures(null);
             gameFrame.revalidate();
 
-            Response response = APIRequestGenerator.createResponse(APIRequestGenerator.createAddressesRequest(address, 5));
+            Response response = APIRequestGenerator.createResponse(APIRequestGenerator.createAddressesRequest(address, maxAddressesNumber));
 
             if (200 != response.code() || null == response.body()) {
                 response.close();
@@ -87,26 +93,24 @@ public final class SwingView {
                 String jsonString = Objects.requireNonNull(response.body()).string();
                 return JsonParserWrapper.parse(jsonString, AddressList.class).getAddresses();
             }
-            catch (Exception e) {
-                logger.error(e.getLocalizedMessage());
+            catch (Exception exception) {
+                logger.error(exception.getLocalizedMessage());
                 return null;
             }
         })
         .thenAccept(addresses -> {
-            if (null == addresses || 0 == addresses.size()) {
-                addressListPanel.add(new JLabel("Failed to get any possible addresses"));
+            if (null == addresses || addresses.isEmpty()) {
+                addressListPanel.addAddress(new JLabel("Failed to get any possible addresses"));
             }
             else {
                 for (var entry : addresses) {
-                    JButton button = new JButton(entry.toString());
+                    JButton button = new JButton(constructAddressButtonText(entry));
+                    button.setHorizontalAlignment(SwingConstants.CENTER);
                     button.addActionListener(e -> {
-                        weatherPanel.updateWeather(null);
-                        featuresPanel.updateFeatures(null);
-                        gameFrame.revalidate();
                         startWeatherSearchHttpRequest(entry.getPosition());
-                        startFeaturesSearchHttpRequest(entry.getPosition());
+                        startFeaturesSearchHttpRequest(entry.getPosition(), maxFeaturesNumber, radius);
                     });
-                    addressListPanel.add(button);
+                    addressListPanel.addAddress(button);
                 }
             }
             gameFrame.revalidate();
@@ -115,6 +119,7 @@ public final class SwingView {
 
     private void startWeatherSearchHttpRequest(GeoPosition position) {
         CompletableFuture.supplyAsync(() -> {
+            weatherPanel.updateWeather(null);
             gameFrame.revalidate();
 
             Response response = APIRequestGenerator.createResponse(APIRequestGenerator.createWeatherRequest(position));
@@ -128,8 +133,8 @@ public final class SwingView {
                 String jsonString = Objects.requireNonNull(response.body()).string();
                 return JsonParserWrapper.parse(jsonString, Weather.class);
             }
-            catch (IOException e) {
-                logger.error(e.getLocalizedMessage());
+            catch (Exception exception) {
+                logger.error(exception.getLocalizedMessage());
                 return null;
             }
         })
@@ -139,9 +144,12 @@ public final class SwingView {
         });
     }
 
-    private void startFeaturesSearchHttpRequest(GeoPosition position) {
+    private void startFeaturesSearchHttpRequest(GeoPosition position, int maxFeaturesNumber, int radius) {
         CompletableFuture.supplyAsync(() -> {
-            Response response = APIRequestGenerator.createResponse(APIRequestGenerator.createFeaturesRequest(position, 1000, 10));
+            featuresPanel.updateFeatures(null);
+            gameFrame.revalidate();
+
+            Response response = APIRequestGenerator.createResponse(APIRequestGenerator.createFeaturesRequest(position, radius, maxFeaturesNumber));
 
             if (200 != response.code() || null == response.body()) {
                 response.close();
@@ -152,8 +160,8 @@ public final class SwingView {
                 String jsonString = Objects.requireNonNull(response.body()).string();
                 return JsonParserWrapper.parse(jsonString, new TypeReference<List<Feature>>() {});
             }
-            catch (IOException e) {
-                logger.error(e.getLocalizedMessage());
+            catch (Exception exception) {
+                logger.error(exception.getLocalizedMessage());
                 return null;
             }
         })
@@ -167,29 +175,43 @@ public final class SwingView {
                 CompletableFuture.supplyAsync(() -> {
                     Response response = APIRequestGenerator.createResponse(APIRequestGenerator.createFeatureDescriptionRequest(feature.getXid()));
 
-                    FeatureDescription nullDesc = new FeatureDescription();
-                    nullDesc.setName(null);
-                    nullDesc.setXid(feature.getXid());
+                    FeatureDescription nullDescription = new FeatureDescription();
+                    nullDescription.setNull(true);
+                    nullDescription.setXid(feature.getXid());
 
                     if (200 != response.code() || null == response.body()) {
                         response.close();
-                        return nullDesc;
+                        return nullDescription;
                     }
 
                     try (response) {
                         String jsonString = Objects.requireNonNull(response.body()).string();
                         return JsonParserWrapper.parse(jsonString, FeatureDescription.class);
                     }
-                    catch (IOException e) {
-                        logger.error(e.getLocalizedMessage());
-                        return nullDesc;
+                    catch (Exception exception) {
+                        logger.error(exception.getLocalizedMessage());
+                        return nullDescription;
                     }
                 })
                 .thenAccept(description -> {
-                    featuresPanel.updateDescription(description.getXid(), description);
+                    featuresPanel.updateDescription(description.getXid(), description.isNull() ? null : description);
                     gameFrame.revalidate();
                 });
             }
         });
+    }
+
+    private String constructAddressButtonText(AddressList.Address address) {
+        return String.format(
+                "<html><body style='text-align: center'>%s<br>%s",
+                address.getName(),
+                Stream.of(
+                       address.getCountry(),
+                       address.getState(),
+                       address.getCity(),
+                       address.getStreet(),
+                       address.getHouseNumber()
+                    ).filter(s -> (null != s) && !s.isEmpty()).collect(Collectors.joining(", "))
+        );
     }
 }

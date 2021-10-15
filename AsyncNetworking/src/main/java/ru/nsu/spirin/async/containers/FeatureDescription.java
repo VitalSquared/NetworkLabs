@@ -12,6 +12,8 @@ public final class FeatureDescription {
     private @Getter @Setter @JsonProperty("info") Info info;
     private @Getter @Setter @JsonProperty("wikipedia_extracts") WikipediaExtracts wikipediaExtracts;
 
+    private @Getter @Setter boolean isNull = false;
+
     public static final class Info {
         private @Getter @Setter @JsonProperty("descr") String description;
 
