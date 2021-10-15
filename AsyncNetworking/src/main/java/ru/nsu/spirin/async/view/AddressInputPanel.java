@@ -1,6 +1,4 @@
-package ru.nsu.spirin.async.view.swing;
-
-import ru.nsu.spirin.async.view.View;
+package ru.nsu.spirin.async.view;
 
 import javax.swing.JButton;
 import javax.swing.JPanel;
@@ -11,15 +9,12 @@ import java.awt.BorderLayout;
 import java.awt.Dimension;
 
 public final class AddressInputPanel extends JPanel {
-
-    private final View view;
     private final JTextField textField;
     private final JButton startButton;
 
-    public AddressInputPanel(View view) {
+    public AddressInputPanel(SwingView view) {
         super(new BorderLayout());
 
-        this.view = view;
         this.textField = new JTextField("");
         this.startButton = new JButton("Search this address!");
 
@@ -44,12 +39,11 @@ public final class AddressInputPanel extends JPanel {
 
             private void updateButton() {
                 startButton.setEnabled(!("".equals(textField.getText())));
+                startButton.revalidate();
             }
         });
 
-        this.startButton.addActionListener(e -> {
-            view.startAddressesSearchHttpRequest(textField.getText());
-        });
+        this.startButton.addActionListener(e -> view.startAddressesSearchHttpRequest(textField.getText()));
 
         add(this.textField, BorderLayout.CENTER);
         add(this.startButton, BorderLayout.EAST);

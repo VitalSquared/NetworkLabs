@@ -25,14 +25,4 @@ public final class FeatureDescription {
         private @Getter @Setter @JsonProperty("title") String title;
         private @Getter @Setter @JsonProperty("text") String text;
     }
-
-    @Override
-    public String toString() {
-        return String.format("""
-                    name: %s
-                    info: %s
-                """,
-                getName(),
-                getInfo());
-    }
 }

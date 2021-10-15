@@ -59,22 +59,4 @@ public final class Weather {
             }
         }
     }
-
-    @Override
-    public String toString() {
-        return String.format("""
-                        temperature: %f
-                        feels like: %f
-                        pressure: %d
-                        humidity: %d
-                        wind speed: %f
-                        wind direction: %s
-                        """,
-                getParameters().getTemperature(),
-                getParameters().getFeelsLikeTemperature(),
-                getParameters().getPressure(),
-                getParameters().getHumidity(),
-                getWind().getSpeed(),
-                getWind().getDirection());
-    }
 }

@@ -1,7 +1,6 @@
-package ru.nsu.spirin.async.view.swing;
+package ru.nsu.spirin.async.view;
 
 import ru.nsu.spirin.async.containers.Weather;
-import ru.nsu.spirin.async.view.View;
 
 import javax.swing.JLabel;
 import javax.swing.JPanel;
@@ -10,16 +9,14 @@ import java.awt.GridLayout;
 
 public final class WeatherPanel extends JPanel {
 
-    private final View view;
     private final JLabel tempLabel;
     private final JLabel humidityLabel;
     private final JLabel windSpeedLabel;
     private final JLabel windDirLabel;
 
-    public WeatherPanel(View view) {
+    public WeatherPanel() {
         super(new GridLayout(4, 1));
         this.setBackground(Color.CYAN);
-        this.view = view;
 
         this.tempLabel = new JLabel("");
         this.humidityLabel = new JLabel("");
@@ -40,12 +37,11 @@ public final class WeatherPanel extends JPanel {
             this.windDirLabel.setText("");
         }
         else {
-            this.tempLabel.setText("Temperature: " + weather.getParameters().getTemperature() + "");
+            this.tempLabel.setText("Temperature: " + weather.getParameters().getTemperature() + " °C");
             this.humidityLabel.setText("Humidity: " + weather.getParameters().getHumidity() + "");
-            this.windSpeedLabel.setText("Wind speed: " + weather.getWind().getSpeed() + "");
+            this.windSpeedLabel.setText("Wind speed: " + weather.getWind().getSpeed() + " m/s");
             this.windDirLabel.setText("Wind direction: " + weather.getWind().getDirection().toString());
         }
-        this.invalidate();
-        this.validate();
+        this.revalidate();
     }
 }
