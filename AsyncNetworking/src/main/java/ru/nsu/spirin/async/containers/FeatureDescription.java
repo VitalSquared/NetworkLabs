@@ -16,11 +16,6 @@ public final class FeatureDescription {
 
     public static final class Info {
         private @Getter @Setter @JsonProperty("descr") String description;
-
-        @Override
-        public String toString() {
-            return this.description;
-        }
     }
 
     public static final class WikipediaExtracts {

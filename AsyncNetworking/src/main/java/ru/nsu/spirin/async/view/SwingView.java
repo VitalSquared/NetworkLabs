@@ -203,7 +203,7 @@ public final class SwingView {
 
     private String constructAddressButtonText(AddressList.Address address) {
         return String.format(
-                "<html><body style='text-align: center'>%s<br>%s",
+                "<html><body style='text-align: center'>%s<br>%s</body></html>",
                 address.getName(),
                 Stream.of(
                        address.getCountry(),
