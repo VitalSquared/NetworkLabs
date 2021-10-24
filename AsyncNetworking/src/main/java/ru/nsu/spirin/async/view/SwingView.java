@@ -26,7 +26,6 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 public final class SwingView {
-
     private static final Logger logger = Logger.getLogger(SwingView.class);
 
     private static final String WINDOW_TITLE = "Location Viewer";
@@ -77,15 +76,9 @@ public final class SwingView {
 
     public void startAddressesSearchHttpRequest(String address, int maxAddressesNumber, int maxFeaturesNumber, int radius) {
         CompletableFuture.supplyAsync(() -> {
-            addressListPanel.clearAll();
-            weatherPanel.updateWeather(null);
-            featuresPanel.updateFeatures(null);
-            gameFrame.revalidate();
-
             Response response = APIRequestGenerator.createResponse(APIRequestGenerator.createAddressesRequest(address, maxAddressesNumber));
 
-            if (200 != response.code() || null == response.body()) {
-                response.close();
+            if (null == response) {
                 return null;
             }
 
@@ -98,34 +91,37 @@ public final class SwingView {
                 return null;
             }
         })
-        .thenAccept(addresses -> {
-            if (null == addresses || addresses.isEmpty()) {
-                addressListPanel.addAddress(new JLabel("Failed to get any possible addresses"));
-            }
-            else {
-                for (var entry : addresses) {
-                    JButton button = new JButton(constructAddressButtonText(entry));
-                    button.setHorizontalAlignment(SwingConstants.CENTER);
-                    button.addActionListener(e -> {
-                        startWeatherSearchHttpRequest(entry.getPosition());
-                        startFeaturesSearchHttpRequest(entry.getPosition(), maxFeaturesNumber, radius);
-                    });
-                    addressListPanel.addAddress(button);
+        .thenAcceptAsync(addresses -> {
+            synchronized (addressListPanel) {
+                addressListPanel.clearAll();
+                weatherPanel.updateWeather(null);
+                featuresPanel.updateFeatures(null);
+                gameFrame.revalidate();
+
+                if (null == addresses || addresses.isEmpty()) {
+                    addressListPanel.addAddress(new JLabel("Failed to get any possible addresses"));
                 }
+                else {
+                    for (var entry : addresses) {
+                        JButton button = new JButton(constructAddressButtonText(entry));
+                        button.setHorizontalAlignment(SwingConstants.CENTER);
+                        button.addActionListener(e -> {
+                            startWeatherSearchHttpRequest(entry.getPosition());
+                            startFeaturesSearchHttpRequest(entry.getPosition(), maxFeaturesNumber, radius);
+                        });
+                        addressListPanel.addAddress(button);
+                    }
+                }
+                gameFrame.revalidate();
             }
-            gameFrame.revalidate();
         });
     }
 
     private void startWeatherSearchHttpRequest(GeoPosition position) {
         CompletableFuture.supplyAsync(() -> {
-            weatherPanel.updateWeather(null);
-            gameFrame.revalidate();
-
             Response response = APIRequestGenerator.createResponse(APIRequestGenerator.createWeatherRequest(position));
 
-            if (200 != response.code() || null == response.body()) {
-                response.close();
+            if (null == response) {
                 return null;
             }
 
@@ -138,21 +134,19 @@ public final class SwingView {
                 return null;
             }
         })
-        .thenAccept(weather -> {
-            weatherPanel.updateWeather(weather);
-            gameFrame.revalidate();
+        .thenAcceptAsync(weather -> {
+            synchronized (weatherPanel) {
+                weatherPanel.updateWeather(weather);
+                gameFrame.revalidate();
+            }
         });
     }
 
     private void startFeaturesSearchHttpRequest(GeoPosition position, int maxFeaturesNumber, int radius) {
         CompletableFuture.supplyAsync(() -> {
-            featuresPanel.updateFeatures(null);
-            gameFrame.revalidate();
-
             Response response = APIRequestGenerator.createResponse(APIRequestGenerator.createFeaturesRequest(position, radius, maxFeaturesNumber));
 
-            if (200 != response.code() || null == response.body()) {
-                response.close();
+            if (null == response) {
                 return null;
             }
 
@@ -165,12 +159,16 @@ public final class SwingView {
                 return null;
             }
         })
-        .thenApply(features -> {
-            featuresPanel.updateFeatures(features);
-            gameFrame.revalidate();
-            return features;
-        })
-        .thenAccept(features -> {
+        .thenAcceptAsync(features -> {
+            synchronized (featuresPanel) {
+                featuresPanel.updateFeatures(features);
+                gameFrame.revalidate();
+            }
+
+            if (null == features) {
+                return;
+            }
+
             for (var feature : features) {
                 CompletableFuture.supplyAsync(() -> {
                     Response response = APIRequestGenerator.createResponse(APIRequestGenerator.createFeatureDescriptionRequest(feature.getXid()));
@@ -179,8 +177,7 @@ public final class SwingView {
                     nullDescription.setNull(true);
                     nullDescription.setXid(feature.getXid());
 
-                    if (200 != response.code() || null == response.body()) {
-                        response.close();
+                    if (null == response) {
                         return nullDescription;
                     }
 
@@ -193,7 +190,7 @@ public final class SwingView {
                         return nullDescription;
                     }
                 })
-                .thenAccept(description -> {
+                .thenAcceptAsync(description -> {
                     featuresPanel.updateDescription(description.getXid(), description.isNull() ? null : description);
                     gameFrame.revalidate();
                 });

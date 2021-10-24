@@ -22,14 +22,13 @@ import java.util.Map;
 public final class FeaturesPanel extends JPanel {
     private static final Dimension DESC_WINDOW_SIZE = new Dimension(960, 540);
 
-    private final JPanel mainPanel;
     private final JPanel[] backgrounds = new JPanel[MAX_FEATURES_NUMBER];
     private final Map<String, JButton> xidToDescButtonMap = new HashMap<>();
 
     public FeaturesPanel() {
         super(new BorderLayout());
 
-        this.mainPanel = new JPanel(new GridLayout(MAX_FEATURES_NUMBER, 1, 0, 10));
+        JPanel mainPanel = new JPanel(new GridLayout(MAX_FEATURES_NUMBER, 1, 0, 10));
         JScrollPane scrollPane = new JScrollPane(mainPanel, ScrollPaneConstants.VERTICAL_SCROLLBAR_ALWAYS, ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER);
 
         for (int i = 0; i < MAX_FEATURES_NUMBER; i++) {
@@ -43,37 +42,38 @@ public final class FeaturesPanel extends JPanel {
     }
 
     public void updateFeatures(List<Feature> features) {
-        if (null == features || features.isEmpty()) {
-            for (int i = 0; i < MAX_FEATURES_NUMBER; i++) {
-                this.backgrounds[i].removeAll();
-                this.backgrounds[i].setVisible(false);
-                this.backgrounds[i].revalidate();
-            }
-            this.xidToDescButtonMap.clear();
+        for (int i = 0; i < MAX_FEATURES_NUMBER; i++) {
+            this.backgrounds[i].removeAll();
+            this.backgrounds[i].setVisible(false);
+            this.backgrounds[i].revalidate();
         }
-        else {
-            int i = 0;
-            for (var entry : features) {
-                if (null == entry.getName() || entry.getName().isEmpty()) {
-                    continue;
-                }
+        this.xidToDescButtonMap.clear();
 
-                JLabel name = new JLabel(entry.getName());
-                JButton button = new JButton("View description");
+        if (null == features) {
+            return;
+        }
 
-                this.backgrounds[i].setVisible(true);
-                this.backgrounds[i].add(name, BorderLayout.CENTER);
-                this.backgrounds[i].add(button, BorderLayout.EAST);
-                this.backgrounds[i].revalidate();
+        int i = 0;
+        for (var entry : features) {
+            if (null == entry.getName() || entry.getName().isEmpty()) {
+                continue;
+            }
 
-                this.xidToDescButtonMap.put(entry.getXid(), button);
+            JLabel name = new JLabel(entry.getName());
+            JButton button = new JButton("View description");
 
-                button.setVisible(false);
+            this.backgrounds[i].setVisible(true);
+            this.backgrounds[i].add(name, BorderLayout.CENTER);
+            this.backgrounds[i].add(button, BorderLayout.EAST);
+            this.backgrounds[i].revalidate();
 
-                i++;
-                if (i >= MAX_FEATURES_NUMBER) {
-                    break;
-                }
+            this.xidToDescButtonMap.put(entry.getXid(), button);
+
+            button.setVisible(false);
+
+            i++;
+            if (i >= MAX_FEATURES_NUMBER) {
+                break;
             }
         }
 
@@ -81,23 +81,26 @@ public final class FeaturesPanel extends JPanel {
     }
 
     public void updateDescription(String xid, FeatureDescription description) {
-        if (!this.xidToDescButtonMap.containsKey(xid)) {
-            return;
+        JButton xidButton;
+        synchronized (this) {
+            if (!this.xidToDescButtonMap.containsKey(xid)) {
+                return;
+            }
+            xidButton = this.xidToDescButtonMap.get(xid);
         }
 
-        JButton xidButton = this.xidToDescButtonMap.get(xid);
         xidButton.setVisible(true);
 
         if (null == description) {
             xidButton.addActionListener(e -> JOptionPane.showMessageDialog(null, "Error occurred trying to get description!"));
         }
         else if (null == description.getInfo() || null == description.getInfo().getDescription()) {
-            xidButton.addActionListener(e -> JOptionPane.showMessageDialog(null, "No description available!"));
+            xidButton.addActionListener(e -> JOptionPane.showMessageDialog(null, "No description available!", description.getName(), JOptionPane.PLAIN_MESSAGE));
         }
         else {
             xidButton.addActionListener(e -> {
                 JOptionPane pane = new JOptionPane("<html>" + description.getInfo().getDescription() + "</html>");
-                JDialog dialog = pane.createDialog(getRootPane(), "Description");
+                JDialog dialog = pane.createDialog(getRootPane(), description.getName());
                 dialog.setSize(DESC_WINDOW_SIZE);
                 dialog.setVisible(true);
             });

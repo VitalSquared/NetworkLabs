@@ -55,15 +55,17 @@ public final class WeatherPanel extends JPanel {
         if (null == weather) {
             for (var comp : this.getComponents()) {
                 if (comp instanceof JLabel) {
-                    JLabel label = (JLabel)comp;
+                    JLabel label = (JLabel) comp;
                     label.setText("");
                 }
             }
         }
         else {
             this.tempLabel.setText("Temperature: " + weather.getParameters().getTemperature() + " °C");
-            this.tempFeelsLikeLabel.setText("Feels like: " + weather.getParameters().getFeelsLikeTemperature() + " °C");
-            this.tempRangeLabel.setText("Range: [" + weather.getParameters().getMinTemperature() + ", " + weather.getParameters().getMaxTemperature() + "] °C");
+            this.tempFeelsLikeLabel.setText(
+                    "Feels like: " + weather.getParameters().getFeelsLikeTemperature() + " °C");
+            this.tempRangeLabel.setText("Range: [" + weather.getParameters().getMinTemperature() + ", " +
+                                        weather.getParameters().getMaxTemperature() + "] °C");
 
             this.windDirLabel.setText("Wind direction: " + weather.getWind().getDirection().toString());
             this.windSpeedLabel.setText("Wind speed: " + weather.getWind().getSpeed() + " m/s");

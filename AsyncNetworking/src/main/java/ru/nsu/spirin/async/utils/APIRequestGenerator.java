@@ -17,6 +17,12 @@ public final class APIRequestGenerator {
 
     private static final String REQUEST_LANGUAGE = "ru";
 
+    private static final int HTTP_OK = 200;
+    private static final int HTTP_TOO_MANY_REQUESTS = 429;
+
+    private static final int MAX_REQUEST_ATTEMPTS_NUMBER = 5;
+    private static final int REQUEST_RETRY_TIMEOUT_MS = 500;
+
     private static final Logger logger = Logger.getLogger(APIRequestGenerator.class);
 
     private static final String GEO_API_KEY = "e05c4b44-b78e-4dce-ad43-0183607d5610";
@@ -67,14 +73,37 @@ public final class APIRequestGenerator {
     }
 
     public static Response createResponse(Request request) {
+        return createResponse(request, 0);
+    }
+
+    private static Response createResponse(Request request, int numberOfAttempts) {
+        if (numberOfAttempts >= MAX_REQUEST_ATTEMPTS_NUMBER) {
+            return null;
+        }
+
         Response response;
         try {
             response = httpClient.newCall(request).execute();
+            if (HTTP_TOO_MANY_REQUESTS == response.code()) {
+                response.close();
+                Thread.sleep(REQUEST_RETRY_TIMEOUT_MS);
+                return createResponse(request, numberOfAttempts + 1);
+            }
         }
         catch (Exception exception) {
             logger.error(exception.getLocalizedMessage());
             response = null;
         }
+
+        if (null == response) {
+            return null;
+        }
+
+        if (HTTP_OK != response.code() || null == response.body()) {
+            response.close();
+            return null;
+        }
+
         return response;
     }
 
