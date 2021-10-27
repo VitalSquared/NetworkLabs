@@ -16,6 +16,7 @@ import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.SwingConstants;
+import javax.swing.SwingUtilities;
 import javax.swing.WindowConstants;
 import java.awt.BorderLayout;
 import java.awt.Dimension;
@@ -92,11 +93,12 @@ public final class SwingView {
             }
         })
         .thenAcceptAsync(addresses -> {
-            synchronized (addressListPanel) {
+            SwingUtilities.invokeLater(() -> {
                 addressListPanel.clearAll();
                 weatherPanel.updateWeather(null);
                 featuresPanel.updateFeatures(null);
                 gameFrame.revalidate();
+
 
                 if (null == addresses || addresses.isEmpty()) {
                     addressListPanel.addAddress(new JLabel("Failed to get any possible addresses"));
@@ -113,7 +115,7 @@ public final class SwingView {
                     }
                 }
                 gameFrame.revalidate();
-            }
+            });
         });
     }
 
@@ -135,10 +137,10 @@ public final class SwingView {
             }
         })
         .thenAcceptAsync(weather -> {
-            synchronized (weatherPanel) {
+            SwingUtilities.invokeLater(() -> {
                 weatherPanel.updateWeather(weather);
                 gameFrame.revalidate();
-            }
+            });
         });
     }
 
@@ -160,10 +162,10 @@ public final class SwingView {
             }
         })
         .thenAcceptAsync(features -> {
-            synchronized (featuresPanel) {
+            SwingUtilities.invokeLater(() -> {
                 featuresPanel.updateFeatures(features);
                 gameFrame.revalidate();
-            }
+            });
 
             if (null == features) {
                 return;
