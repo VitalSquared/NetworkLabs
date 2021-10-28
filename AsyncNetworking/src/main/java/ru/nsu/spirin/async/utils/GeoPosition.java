@@ -1,14 +1,15 @@
 package ru.nsu.spirin.async.utils;
 
+import com.fasterxml.jackson.annotation.JsonAlias;
 import lombok.Getter;
-import lombok.RequiredArgsConstructor;
+import lombok.Setter;
 
 import java.util.Locale;
 
-@RequiredArgsConstructor
+@Getter @Setter
 public class GeoPosition {
-    private @Getter final double latitude;
-    private @Getter final double longitude;
+    private @JsonAlias("lat") double latitude;
+    private @JsonAlias({"lng", "lon"}) double longitude;
 
     public String getLatitudeAsString() {
         return String.format(Locale.US, "%f", this.latitude);

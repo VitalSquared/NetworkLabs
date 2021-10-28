@@ -1,5 +1,6 @@
 package ru.nsu.spirin.async.view;
 
+import lombok.Getter;
 import ru.nsu.spirin.async.containers.Feature;
 import ru.nsu.spirin.async.containers.FeatureDescription;
 import static ru.nsu.spirin.async.utils.APIRequestGenerator.*;
@@ -14,22 +15,22 @@ import javax.swing.ScrollPaneConstants;
 import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Dimension;
-import java.awt.GridLayout;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-public final class FeaturesPanel extends JPanel {
+public final class FeaturesPanel {
     private static final Dimension DESC_WINDOW_SIZE = new Dimension(960, 540);
+
+    private final JPanel mainPanel;
+    private final @Getter JScrollPane scrollPane;
 
     private final JPanel[] backgrounds = new JPanel[MAX_FEATURES_NUMBER];
     private final Map<String, JButton> xidToDescButtonMap = new HashMap<>();
 
     public FeaturesPanel() {
-        super(new BorderLayout());
-
-        JPanel mainPanel = new JPanel(new GridLayout(MAX_FEATURES_NUMBER, 1, 0, 10));
-        JScrollPane scrollPane = new JScrollPane(mainPanel, ScrollPaneConstants.VERTICAL_SCROLLBAR_ALWAYS, ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER);
+        this.mainPanel = new JPanel(SwingUtils.createVerticalGridLayout(MAX_FEATURES_NUMBER));
+        this.scrollPane = new JScrollPane(mainPanel, ScrollPaneConstants.VERTICAL_SCROLLBAR_ALWAYS, ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER);
 
         for (int i = 0; i < MAX_FEATURES_NUMBER; i++) {
             this.backgrounds[i] = new JPanel(new BorderLayout());
@@ -37,8 +38,6 @@ public final class FeaturesPanel extends JPanel {
             this.backgrounds[i].setVisible(false);
             mainPanel.add(this.backgrounds[i]);
         }
-
-        add(scrollPane, BorderLayout.CENTER);
     }
 
     public void updateFeatures(List<Feature> features) {
@@ -77,7 +76,7 @@ public final class FeaturesPanel extends JPanel {
             }
         }
 
-        this.revalidate();
+        this.mainPanel.revalidate();
     }
 
     public void updateDescription(String xid, FeatureDescription description) {
@@ -100,12 +99,12 @@ public final class FeaturesPanel extends JPanel {
         else {
             xidButton.addActionListener(e -> {
                 JOptionPane pane = new JOptionPane("<html>" + description.getInfo().getDescription() + "</html>");
-                JDialog dialog = pane.createDialog(getRootPane(), description.getName());
+                JDialog dialog = pane.createDialog(this.mainPanel.getRootPane(), description.getName());
                 dialog.setSize(DESC_WINDOW_SIZE);
                 dialog.setVisible(true);
             });
         }
 
-        this.revalidate();
+        this.mainPanel.revalidate();
     }
 }

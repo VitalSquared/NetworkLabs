@@ -62,16 +62,16 @@ public final class SwingView {
         AddressInputPanel addressInputPanel = new AddressInputPanel(this);
 
         JPanel leftPanel = new JPanel(new BorderLayout(0, 25));
-        leftPanel.add(addressInputPanel, BorderLayout.NORTH);
-        leftPanel.add(this.addressListPanel, BorderLayout.CENTER);
+        leftPanel.add(addressInputPanel.getParentPanel(), BorderLayout.NORTH);
+        leftPanel.add(this.addressListPanel.getScrollPane(), BorderLayout.CENTER);
 
         return leftPanel;
     }
 
     private JPanel createRightPanel() {
         JPanel rightPanel = new JPanel(new BorderLayout(0, 25));
-        rightPanel.add(this.weatherPanel, BorderLayout.NORTH);
-        rightPanel.add(this.featuresPanel, BorderLayout.CENTER);
+        rightPanel.add(this.weatherPanel.getParentPanel(), BorderLayout.NORTH);
+        rightPanel.add(this.featuresPanel.getScrollPane(), BorderLayout.CENTER);
         return rightPanel;
     }
 

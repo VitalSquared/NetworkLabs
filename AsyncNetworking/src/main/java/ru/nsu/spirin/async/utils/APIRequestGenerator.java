@@ -5,7 +5,28 @@ import okhttp3.Request;
 import okhttp3.Response;
 import org.apache.log4j.Logger;
 
+import java.io.IOException;
+import java.io.InputStream;
+import java.util.Properties;
+
 public final class APIRequestGenerator {
+    private static final Logger logger = Logger.getLogger(APIRequestGenerator.class);
+    private static final Properties properties;
+
+    static {
+        properties = new Properties();
+
+        InputStream stream = ClassLoader.getSystemResourceAsStream("keys.properties");
+        if (null != stream) {
+            try (stream) {
+                properties.load(stream);
+            }
+            catch (IOException exception) {
+                logger.error(exception.getLocalizedMessage());
+            }
+        }
+    }
+
     public static final int MIN_ADDRESSES_NUMBER = 1;
     public static final int MAX_ADDRESSES_NUMBER = 15;
 
@@ -23,12 +44,6 @@ public final class APIRequestGenerator {
     private static final int MAX_REQUEST_ATTEMPTS_NUMBER = 5;
     private static final int REQUEST_RETRY_TIMEOUT_MS = 500;
 
-    private static final Logger logger = Logger.getLogger(APIRequestGenerator.class);
-
-    private static final String GEO_API_KEY = "e05c4b44-b78e-4dce-ad43-0183607d5610";
-    private static final String OTM_API_KEY = "5ae2e3f221c38a28845f05b6be4a37dab9dfb1e566d9e74817be9d50";
-    private static final String OWP_API_KEY = "4ff48f6d420194b719d75f4af226cf80";
-
     private static final OkHttpClient httpClient = new OkHttpClient();
 
     public static Request createAddressesRequest(String address, int countLimit) {
@@ -37,7 +52,7 @@ public final class APIRequestGenerator {
                 address.toLowerCase(),
                 clampValue(countLimit, MIN_ADDRESSES_NUMBER, MAX_ADDRESSES_NUMBER),
                 REQUEST_LANGUAGE,
-                GEO_API_KEY);
+                properties.getProperty("GEO_API_KEY"));
         return new Request.Builder().url(url).get().build();
     }
 
@@ -49,7 +64,8 @@ public final class APIRequestGenerator {
                 clampValue(radius, MIN_RADIUS_METERS, MAX_RADIUS_METERS) + ".0",
                 position.getLongitudeAsString(),
                 position.getLatitudeAsString(),
-                clampValue(countLimit, MIN_FEATURES_NUMBER, MAX_FEATURES_NUMBER), OTM_API_KEY);
+                clampValue(countLimit, MIN_FEATURES_NUMBER, MAX_FEATURES_NUMBER),
+                properties.getProperty("OTM_API_KEY"));
         return new Request.Builder().url(url).get().build();
     }
 
@@ -58,7 +74,7 @@ public final class APIRequestGenerator {
                 "http://api.opentripmap.com/0.1/%s/places/xid/%s?apikey=%s",
                 REQUEST_LANGUAGE,
                 featureXID,
-                OTM_API_KEY);
+                properties.getProperty("OTM_API_KEY"));
         return new Request.Builder().url(url).get().build();
     }
 
@@ -68,7 +84,7 @@ public final class APIRequestGenerator {
                 position.getLongitudeAsString(),
                 position.getLatitudeAsString(),
                 REQUEST_LANGUAGE,
-                OWP_API_KEY);
+                properties.getProperty("OWP_API_KEY"));
         return new Request.Builder().url(url).get().build();
     }
 

@@ -6,33 +6,37 @@ import lombok.Setter;
 
 import java.util.List;
 
+@Getter @Setter
 public final class Weather {
-    private @Getter @Setter @JsonProperty("weather") List<GeneralWeather> general;
-    private @Getter @Setter @JsonProperty("main") WeatherParameters    parameters;
-    private @Getter @Setter @JsonProperty("visibility") int visibility;
-    private @Getter @Setter @JsonProperty("wind") Wind wind;
-    private @Getter @Setter @JsonProperty("clouds") Clouds clouds;
+    private @JsonProperty("weather") List<GeneralWeather> general;
+    private @JsonProperty("main") WeatherParameters    parameters;
+    private int visibility;
+    private Wind wind;
+    private Clouds clouds;
 
+    @Getter @Setter
     public static final class GeneralWeather {
-        private @Getter @Setter @JsonProperty("main") String main;
-        private @Getter @Setter @JsonProperty("description") String description;
+        private String main;
+        private String description;
     }
 
+    @Getter @Setter
     public static final class WeatherParameters {
-        private @Getter @Setter @JsonProperty("temp") double temperature;
-        private @Getter @Setter @JsonProperty("feels_like") double feelsLikeTemperature;
-        private @Getter @Setter @JsonProperty("temp_min") double minTemperature;
-        private @Getter @Setter @JsonProperty("temp_max") double maxTemperature;
-        private @Getter @Setter @JsonProperty("pressure") int pressure;
-        private @Getter @Setter @JsonProperty("humidity") int humidity;
-        private @Getter @Setter @JsonProperty("sea_level") int seaLevel;
-        private @Getter @Setter @JsonProperty("grnd_level") int groundLevel;
+        private @JsonProperty("temp") double temperature;
+        private @JsonProperty("feels_like") double feelsLikeTemperature;
+        private @JsonProperty("temp_min") double minTemperature;
+        private @JsonProperty("temp_max") double maxTemperature;
+        private int pressure;
+        private int humidity;
+        private @JsonProperty("sea_level") int seaLevel;
+        private @JsonProperty("grnd_level") int groundLevel;
     }
 
+    @Getter @Setter
     public static final class Wind {
-        private @Getter @Setter @JsonProperty("speed") double speed;
-        private @Getter @Setter @JsonProperty("deg") int degree;
-        private @Getter @Setter @JsonProperty("gust") double gust;
+        private double speed;
+        private @JsonProperty("deg") int degree;
+        private double gust;
 
         public Direction getDirection() {
             int index = (this.degree % 360) / 45;
@@ -62,7 +66,8 @@ public final class Weather {
         }
     }
 
+    @Getter @Setter
     public static final class Clouds {
-        private @Getter @Setter @JsonProperty("all") int clouds;
+        private @JsonProperty("all") int clouds;
     }
 }

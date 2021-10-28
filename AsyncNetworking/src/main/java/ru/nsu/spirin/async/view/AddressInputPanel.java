@@ -1,5 +1,6 @@
 package ru.nsu.spirin.async.view;
 
+import lombok.Getter;
 import static ru.nsu.spirin.async.utils.APIRequestGenerator.*;
 
 import javax.swing.JButton;
@@ -13,13 +14,14 @@ import javax.swing.event.DocumentListener;
 import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Dimension;
-import java.awt.GridLayout;
 
-public final class AddressInputPanel extends JPanel {
+public final class AddressInputPanel {
     private static final Dimension TEXT_FIELD_SIZE = new Dimension(200, 50);
+    private @Getter final JPanel parentPanel;
 
     public AddressInputPanel(SwingView view) {
-        super(new GridLayout(4, 1));
+        this.parentPanel = new JPanel(SwingUtils.createVerticalGridLayoutNoGaps(4));
+
         JSlider addressSlider = createNumberSelectionPanel("Max number of addresses to show", MIN_ADDRESSES_NUMBER, MAX_ADDRESSES_NUMBER);
         JSlider featuresSlider = createNumberSelectionPanel("Max number of features to show", MIN_FEATURES_NUMBER, MAX_FEATURES_NUMBER);
         JSlider radiusSlider = createNumberSelectionPanel("Search radius(m) of features", MIN_RADIUS_METERS, MAX_RADIUS_METERS);
@@ -27,7 +29,7 @@ public final class AddressInputPanel extends JPanel {
     }
 
     private JSlider createNumberSelectionPanel(String text, int minValue, int maxValue) {
-        JPanel panel = new JPanel(new GridLayout(1, 2));
+        JPanel panel = new JPanel(SwingUtils.createHorizontalGridLayoutNoGaps(2));
 
         JSlider slider = new JSlider(SwingConstants.HORIZONTAL, minValue, maxValue, (minValue + maxValue) / 2);
         JLabel sliderInfo = new JLabel(slider.getValue() + " - " + text);
@@ -40,7 +42,7 @@ public final class AddressInputPanel extends JPanel {
         panel.add(sliderInfo);
         panel.setBackground(Color.LIGHT_GRAY);
 
-        add(panel);
+        this.parentPanel.add(panel);
 
         return slider;
     }
@@ -88,6 +90,6 @@ public final class AddressInputPanel extends JPanel {
         inputPanel.add(textField, BorderLayout.CENTER);
         inputPanel.add(startButton, BorderLayout.EAST);
 
-        add(inputPanel);
+        this.parentPanel.add(inputPanel);
     }
 }

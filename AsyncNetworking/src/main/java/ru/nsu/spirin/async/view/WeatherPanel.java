@@ -1,13 +1,15 @@
 package ru.nsu.spirin.async.view;
 
+import lombok.Getter;
 import ru.nsu.spirin.async.containers.Weather;
 
 import javax.swing.JLabel;
 import javax.swing.JPanel;
 import java.awt.Color;
-import java.awt.GridLayout;
 
-public final class WeatherPanel extends JPanel {
+public final class WeatherPanel {
+    private final @Getter JPanel parentPanel;
+
     private final JLabel tempLabel = new JLabel("");
     private final JLabel tempFeelsLikeLabel = new JLabel("");
     private final JLabel tempRangeLabel = new JLabel("");
@@ -28,32 +30,32 @@ public final class WeatherPanel extends JPanel {
     private final JLabel visibilityLabel = new JLabel("");
 
     public WeatherPanel() {
-        super(new GridLayout(5, 3, 0, 10));
-        this.setBackground(Color.CYAN);
+        parentPanel = new JPanel(SwingUtils.createTableGridLayout(5, 3));
+        this.parentPanel.setBackground(Color.CYAN);
 
-        add(this.tempLabel);
-        add(this.tempFeelsLikeLabel);
-        add(this.tempRangeLabel);
+        this.parentPanel.add(this.tempLabel);
+        this.parentPanel.add(this.tempFeelsLikeLabel);
+        this.parentPanel.add(this.tempRangeLabel);
 
-        add(this.windSpeedLabel);
-        add(this.windDirLabel);
-        add(this.windGustLabel);
+        this.parentPanel.add(this.windSpeedLabel);
+        this.parentPanel.add(this.windDirLabel);
+        this.parentPanel.add(this.windGustLabel);
 
-        add(this.pressureLabel);
-        add(this.groundLevelLabel);
-        add(this.seaLevelLabel);
+        this.parentPanel.add(this.pressureLabel);
+        this.parentPanel.add(this.groundLevelLabel);
+        this.parentPanel.add(this.seaLevelLabel);
 
-        add(this.mainLabel);
-        add(this.descriptionLabel);
-        add(this.cloudsLabel);
+        this.parentPanel.add(this.mainLabel);
+        this.parentPanel.add(this.descriptionLabel);
+        this.parentPanel.add(this.cloudsLabel);
 
-        add(this.humidityLabel);
-        add(this.visibilityLabel);
+        this.parentPanel.add(this.humidityLabel);
+        this.parentPanel.add(this.visibilityLabel);
     }
 
     public void updateWeather(Weather weather) {
         if (null == weather) {
-            for (var comp : this.getComponents()) {
+            for (var comp : this.parentPanel.getComponents()) {
                 if (comp instanceof JLabel) {
                     JLabel label = (JLabel) comp;
                     label.setText("");
@@ -82,6 +84,6 @@ public final class WeatherPanel extends JPanel {
             this.humidityLabel.setText("Humidity: " + weather.getParameters().getHumidity() + "%");
             this.visibilityLabel.setText("Visibility: " + weather.getVisibility() + " m");
         }
-        this.revalidate();
+        this.parentPanel.revalidate();
     }
 }
