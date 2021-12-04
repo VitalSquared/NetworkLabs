@@ -22,8 +22,8 @@ public final class RoleChangeMessage extends Message {
         var builder = SnakesProto.GameMessage.newBuilder();
 
         var roleBuilder = SnakesProto.GameMessage.RoleChangeMsg.newBuilder();
-        roleBuilder.setSenderRole(senderRole);
-        roleBuilder.setReceiverRole(receiverRole);
+        roleBuilder.setSenderRole(this.senderRole);
+        roleBuilder.setReceiverRole(this.receiverRole);
 
         builder.setRoleChange(roleBuilder.build());
         builder.setMsgSeq(getMessageSequence());

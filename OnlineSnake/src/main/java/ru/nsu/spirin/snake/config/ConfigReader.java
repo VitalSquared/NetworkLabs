@@ -28,7 +28,7 @@ public final class ConfigReader {
     }
 
     public static GameConfig getConfig() {
-        GameConfig.Builder builder = GameConfig.newBuilder();
+        var builder = GameConfig.newBuilder();
         builder.clear();
         builder.setDeadFoodProb(getFloatProperty(ConfigFieldNames.DEAD_FOOD_PROBABILITY, builder.getDeadFoodProb()));
         builder.setFoodPerPlayer(getFloatProperty(ConfigFieldNames.FOOD_PER_PLAYER, builder.getFoodPerPlayer()));

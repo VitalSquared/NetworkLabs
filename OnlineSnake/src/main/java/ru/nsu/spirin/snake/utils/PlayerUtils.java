@@ -5,8 +5,8 @@ import me.ippolitov.fit.snakes.SnakesProto;
 import me.ippolitov.fit.snakes.SnakesProto.GamePlayer;
 import org.apache.log4j.Logger;
 import ru.nsu.spirin.snake.datatransfer.NetNode;
-import ru.nsu.spirin.snake.game.Player;
-import ru.nsu.spirin.snake.game.Snake;
+import ru.nsu.spirin.snake.gamehandler.Player;
+import ru.nsu.spirin.snake.gamehandler.Snake;
 
 import java.net.UnknownHostException;
 import java.util.List;

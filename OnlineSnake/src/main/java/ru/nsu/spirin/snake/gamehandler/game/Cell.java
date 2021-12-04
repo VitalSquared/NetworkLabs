@@ -1,27 +1,31 @@
-package ru.nsu.spirin.snake.game;
+package ru.nsu.spirin.snake.gamehandler.game;
 
 import lombok.Getter;
-import lombok.RequiredArgsConstructor;
 import lombok.Setter;
-import org.jetbrains.annotations.NotNull;
+import ru.nsu.spirin.snake.gamehandler.Point2D;
 
 import java.util.Objects;
 
-@RequiredArgsConstructor
 public final class Cell {
-    private final @NotNull @Getter Point2D point;
-    private @NotNull @Getter @Setter CellType type;
+    private final @Getter
+    Point2D point;
+    private @Getter @Setter CellType type;
 
-    public Cell(int x, int y, @NotNull CellType type) {
+    public Cell(int x, int y, CellType type) {
         this.point = new Point2D(x, y);
-        this.type = Objects.requireNonNull(type, "Cell type cant be null");
+        this.type = type;
+    }
+
+    public Cell(Point2D point, CellType type) {
+        this.point = point;
+        this.type = type;
     }
 
     public Cell(int x, int y) {
         this(x, y, CellType.EMPTY);
     }
 
-    public Cell(@NotNull Cell cell) {
+    public Cell(Cell cell) {
         this(cell.point, cell.getType());
     }
 
@@ -38,7 +42,7 @@ public final class Cell {
         if (this == object) {
             return true;
         }
-        if (object == null || getClass() != object.getClass()) {
+        if (null == object || getClass() != object.getClass()) {
             return false;
         }
         Cell other = (Cell) object;
@@ -47,6 +51,6 @@ public final class Cell {
 
     @Override
     public int hashCode() {
-        return Objects.hash(point, type);
+        return Objects.hash(this.point, this.type);
     }
 }

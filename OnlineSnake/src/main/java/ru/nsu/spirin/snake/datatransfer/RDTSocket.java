@@ -10,56 +10,92 @@ import java.io.IOException;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
+import java.time.Instant;
+import java.util.AbstractMap;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ConcurrentHashMap;
 
 public final class RDTSocket {
     private final DatagramSocket socket;
-    private final Map<Message, NetNode> receivedMessages = new ConcurrentHashMap<>();
-    private final Map<Message, NetNode> sentMessages = new ConcurrentHashMap<>();
-    private final Map<Message, NetNode> messagesToSend = new ConcurrentHashMap<>();
-    private final Map<Long, Message> ackedMessages = new ConcurrentHashMap<>();
+    private final Map<Message, NetNode> sentMessages = new HashMap<>();
+    private final Map<Message, NetNode> messagesToSend = new HashMap<>();
+    private final Map<Map.Entry<NetNode, Long>, Message> responses = new HashMap<>();
+    private final Map<Instant, Map.Entry<Message, NetNode>> receivedMessages = new HashMap<>();
 
     private final Thread sender;
     private final Thread receiver;
 
     public RDTSocket(DatagramSocket socket, int senderTimeoutMs) {
         this.socket = socket;
-        sender = new Thread(new Sender(senderTimeoutMs));
-        receiver = new Thread(new Receiver());
-        sender.start();
-        receiver.start();
+        this.sender = new Thread(new Sender(senderTimeoutMs));
+        this.receiver = new Thread(new Receiver());
+        this.sender.start();
+        this.receiver.start();
     }
 
     public void stop() {
-        sender.interrupt();
-        receiver.interrupt();
+        this.sender.interrupt();
+        this.receiver.interrupt();
     }
 
     public int getLocalPort() {
         return this.socket.getLocalPort();
     }
 
-    public CompletableFuture<Message> send(Message message, InetAddress destAddress, int destPort) {
-        return CompletableFuture.supplyAsync(() -> {
-            addMessageToSend(new NetNode(destAddress, destPort), message);
-            Message result;
-            synchronized (ackedMessages) {
-                while (!ackedMessages.containsKey(message.getMessageSequence())) {
-                    try {
-                        ackedMessages.wait();
-                    }
-                    catch (InterruptedException e) {
-                        e.printStackTrace();
+    public Message send(Message message, InetAddress destAddress, int destPort) {
+        NetNode dest = new NetNode(destAddress, destPort);
+
+        synchronized (sentMessages) {
+            Message msgToRemove = null;
+            for (var msg : sentMessages.keySet()) {
+                if (msg.getType() == message.getType() && sentMessages.get(msg).equals(dest)) {
+                    msgToRemove = msg;
+                    break;
+                }
+            }
+            sentMessages.remove(msgToRemove);
+        }
+        synchronized (messagesToSend) {
+            Message msgToRemove = null;
+            for (var msg : messagesToSend.keySet()) {
+                if (msg.getType() == message.getType() && messagesToSend.get(msg).equals(dest)) {
+                    msgToRemove = msg;
+                    break;
+                }
+            }
+            messagesToSend.remove(msgToRemove);
+        }
+
+        var key = new AbstractMap.SimpleEntry<>(dest, message.getMessageSequence());
+        addMessageToSend(dest, message);
+        Message result;
+        synchronized (responses) {
+            while (!responses.containsKey(key)) {
+                synchronized (messagesToSend) {
+                    synchronized (sentMessages) {
+                        if (!sentMessages.containsKey(message) && !messagesToSend.containsKey(message)) {
+                            return null;
+                        }
                     }
                 }
-                result = ackedMessages.get(message.getMessageSequence());
-                ackedMessages.remove(message.getMessageSequence());
+                try {
+                    responses.wait();
+                }
+                catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
             }
-            return result;
-        });
+            result = responses.get(key);
+            responses.remove(key);
+            synchronized (sentMessages) {
+                sentMessages.remove(message);
+            }
+            synchronized (messagesToSend) {
+                messagesToSend.remove(message);
+            }
+        }
+        return result;
     }
 
     public void sendWithoutConfirm(DatagramPacket packet) throws IOException {
@@ -77,34 +113,42 @@ public final class RDTSocket {
                     e.printStackTrace();
                 }
             }
-            received = receivedMessages.entrySet().stream().findFirst().get();
-            receivedMessages.remove(received.getKey());
+            Instant earliest = receivedMessages.keySet().stream().findFirst().get();
+            received = receivedMessages.get(earliest);
+            receivedMessages.remove(earliest);
         }
         return received;
     }
 
-    public void addMessageToSend(@NotNull NetNode receiver, @NotNull Message gameMessage) {
+    public void addMessageToSend(@NotNull NetNode receiver, @NotNull Message message) {
         synchronized (messagesToSend) {
-            messagesToSend.put(gameMessage, receiver);
+            messagesToSend.put(message, receiver);
+            messagesToSend.notifyAll();
         }
     }
 
     public void addReceivedMessage(@NotNull NetNode sender, @NotNull Message gameMessage) {
         if (gameMessage.getType() == MessageType.ACK || gameMessage.getType() == MessageType.ERROR) {
-            synchronized (sentMessages) {
-                sentMessages.remove(sender);
-            }
-            synchronized (ackedMessages) {
-                ackedMessages.put(gameMessage.getMessageSequence(), gameMessage);
-                ackedMessages.notifyAll();
+            synchronized (responses) {
+                responses.put(new AbstractMap.SimpleEntry<>(sender, gameMessage.getMessageSequence()), gameMessage);
+                responses.notifyAll();
             }
             return;
         }
         if (gameMessage.getType().isNeedConfirmation()) {
-            addMessageToSend(sender, new AckMessage(gameMessage.getMessageSequence(), gameMessage.getReceiverID(), gameMessage.getSenderID()));
+            try {
+                sendWithoutConfirm(MessageParser.serializeMessage(
+                        new AckMessage(gameMessage.getMessageSequence(), gameMessage.getReceiverID(), gameMessage.getSenderID()),
+                        sender.getAddress(),
+                        sender.getPort()
+                ));
+            }
+            catch (IOException e) {
+                e.printStackTrace();
+            }
         }
         synchronized (receivedMessages) {
-            receivedMessages.put(Objects.requireNonNull(gameMessage), Objects.requireNonNull(sender));
+            receivedMessages.put(Instant.now(), new AbstractMap.SimpleEntry<>(Objects.requireNonNull(gameMessage), Objects.requireNonNull(sender)));
             receivedMessages.notifyAll();
         }
     }
@@ -116,24 +160,36 @@ public final class RDTSocket {
         @Override
         public void run() {
             while (!Thread.currentThread().isInterrupted()) {
-                try {
-                    synchronized (messagesToSend) {
-                        synchronized (sentMessages) {
-                            messagesToSend.putAll(sentMessages);
-                            sentMessages.clear();
-                        }
-                        for (var msg : messagesToSend.keySet()) {
-                            NetNode node = messagesToSend.get(msg);
-                            socket.send(MessageParser.serializeMessage(msg, node.getAddress(), node.getPort()));
-                            synchronized (sentMessages) {
-                                sentMessages.put(msg, node);
+                synchronized (messagesToSend) {
+                    synchronized (sentMessages) {
+                        messagesToSend.putAll(sentMessages);
+                        sentMessages.clear();
+                    }
+                    for (var msg : messagesToSend.keySet()) {
+                        NetNode node = messagesToSend.get(msg);
+                        synchronized (responses) {
+                            if (responses.containsKey(new AbstractMap.SimpleEntry<>(node, msg.getMessageSequence()))) {
+                                continue;
                             }
                         }
+                        try {
+                            socket.send(MessageParser.serializeMessage(msg, node.getAddress(), node.getPort()));
+                        }
+                        catch (IOException e) {
+                            e.printStackTrace();
+                        }
                     }
-                    Thread.sleep(timeoutMs);
-                }
-                catch (IOException | InterruptedException exception) {
-                    exception.printStackTrace();
+                    synchronized (sentMessages) {
+                        sentMessages.putAll(messagesToSend);
+                    }
+                    messagesToSend.clear();
+
+                    try {
+                        messagesToSend.wait();
+                    }
+                    catch (InterruptedException e) {
+                        e.printStackTrace();
+                    }
                 }
             }
         }

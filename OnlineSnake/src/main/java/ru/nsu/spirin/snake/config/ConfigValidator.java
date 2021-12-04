@@ -5,11 +5,11 @@ import me.ippolitov.fit.snakes.SnakesProto.GameConfig;
 
 @UtilityClass
 public final class ConfigValidator {
-    private static final int MIN_FIELD_WIDTH = 10;
-    private static final int MAX_FIELD_WIDTH = 100;
+    public static final int MIN_FIELD_WIDTH = 10;
+    public static final int MAX_FIELD_WIDTH = 100;
 
-    private static final int MIN_FIELD_HEIGHT = 10;
-    private static final int MAX_FIELD_HEIGHT = 100;
+    public static final int MIN_FIELD_HEIGHT = 10;
+    public static final int MAX_FIELD_HEIGHT = 100;
 
     private static final float MIN_FOOD_PER_PLAYER = 0.0f;
     private static final float MAX_FOOD_PER_PLAYER = 100.0f;
@@ -42,13 +42,13 @@ public final class ConfigValidator {
 
     private static void validateIntField(int fieldValue, int minValue, int maxValue, String fieldName) {
         if (fieldValue < minValue || fieldValue > maxValue) {
-            throw new IllegalStateException(String.format("%s=%d is not in range [%d, %d]", fieldName, fieldValue, minValue, maxValue));
+            throw new IllegalStateException(String.format("Config field %s=%d is not in range [%d, %d]", fieldName, fieldValue, minValue, maxValue));
         }
     }
 
     private static void validateFloatField(float fieldValue, float minValue, float maxValue, String fieldName) {
         if (Float.compare(fieldValue, minValue) < 0 || Float.compare(fieldValue, maxValue) > 0) {
-            throw new IllegalStateException(String.format("%s=%f is not in range [%f, %f]", fieldName, fieldValue, minValue, maxValue));
+            throw new IllegalStateException(String.format("Config field %s=%f is not in range [%f, %f]", fieldName, fieldValue, minValue, maxValue));
         }
     }
 }

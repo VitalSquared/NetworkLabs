@@ -20,7 +20,7 @@ public final class SteerMessage extends Message {
         var builder = SnakesProto.GameMessage.newBuilder();
 
         var steerBuilder = SnakesProto.GameMessage.SteerMsg.newBuilder();
-        steerBuilder.setDirection(direction);
+        steerBuilder.setDirection(this.direction);
 
         builder.setSteer(steerBuilder.build());
         builder.setMsgSeq(getMessageSequence());

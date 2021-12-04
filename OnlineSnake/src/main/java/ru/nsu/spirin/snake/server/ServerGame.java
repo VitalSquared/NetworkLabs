@@ -1,20 +1,18 @@
 package ru.nsu.spirin.snake.server;
 
-import com.google.protobuf.InvalidProtocolBufferException;
 import lombok.Getter;
 import me.ippolitov.fit.snakes.SnakesProto.Direction;
 import me.ippolitov.fit.snakes.SnakesProto.GameConfig;
 import me.ippolitov.fit.snakes.SnakesProto.NodeRole;
-import org.apache.commons.lang3.SerializationException;
 import org.apache.log4j.Logger;
 import org.jetbrains.annotations.NotNull;
 import ru.nsu.spirin.snake.datatransfer.MessageParser;
 import ru.nsu.spirin.snake.datatransfer.RDTSocket;
-import ru.nsu.spirin.snake.datatransfer.messages.MessageType;
-import ru.nsu.spirin.snake.game.Game;
-import ru.nsu.spirin.snake.game.GameObserver;
-import ru.nsu.spirin.snake.game.GameState;
-import ru.nsu.spirin.snake.game.Player;
+import ru.nsu.spirin.snake.gamehandler.GameHandler;
+import ru.nsu.spirin.snake.gamehandler.game.Game;
+import ru.nsu.spirin.snake.gamehandler.GameObserver;
+import ru.nsu.spirin.snake.gamehandler.GameState;
+import ru.nsu.spirin.snake.gamehandler.Player;
 import ru.nsu.spirin.snake.datatransfer.NetNode;
 import ru.nsu.spirin.snake.datatransfer.messages.AckMessage;
 import ru.nsu.spirin.snake.datatransfer.messages.AnnouncementMessage;
@@ -27,7 +25,6 @@ import ru.nsu.spirin.snake.datatransfer.messages.StateMessage;
 import ru.nsu.spirin.snake.datatransfer.messages.SteerMessage;
 
 import java.io.IOException;
-import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
 import java.net.SocketException;
@@ -35,7 +32,6 @@ import java.net.UnknownHostException;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.*;
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicLong;
 
@@ -43,7 +39,7 @@ public final class ServerGame implements GameObserver {
     private static final Logger logger = Logger.getLogger(ServerGame.class);
     public static final int ANNOUNCEMENT_SEND_PERIOD = 1000;
 
-    private final Game game;
+    private final GameHandler game;
     private final @NotNull GameConfig gameConfig;
     private final Map<Player, Direction> playersMoves = new ConcurrentHashMap<>();
     private final Map<Player, Instant> playersLastSeen = new ConcurrentHashMap<>();
@@ -58,8 +54,8 @@ public final class ServerGame implements GameObserver {
 
     private final AtomicLong msgSeq = new AtomicLong(0);
 
-    private Player master;
-    private Player deputy;
+    private Player master = null;
+    private Player deputy = null;
 
     public ServerGame(@NotNull GameConfig gameConfig, InetAddress multicastAddress, int multicastPort, int masterPort, String masterName) throws SocketException {
         this.gameConfig = Objects.requireNonNull(gameConfig);
@@ -93,27 +89,16 @@ public final class ServerGame implements GameObserver {
         this.multicastPort = multicastPort;
         this.datagramSocket = new DatagramSocket();
         this.socket = new RDTSocket(this.datagramSocket, gameConfig.getNodeTimeoutMs());
-        final Player[] master = { null };
-        final Player[] deputy = { null };
         gameState.getActivePlayers().forEach(player -> {
             Optional<Player> player1 = registerNewPlayer(player.getNetNode(), player.getName());
             if (player1.isPresent()) {
                 Player player2 = player1.get();
-                player2.setRole(player.getRole());
+                player2.setRole(player.getRole() == NodeRole.DEPUTY ? NodeRole.MASTER : NodeRole.NORMAL);
                 player2.setScore(player.getScore());
-                if (player2.getRole() == NodeRole.DEPUTY) {
-                    deputy[0] = player2;
-                }
-                else if (player2.getRole() == NodeRole.MASTER) {
-                    master[0] = player2;
-                }
             }
         });
-        if (master[0] == null) {
-            this.master = deputy[0];
-            deputy[0].setRole(NodeRole.MASTER);
-        }
         startGameUpdateTimer();
+        startReceivingMessages();
         startSendAnnouncementMessages();
         startRemovingDisconnectedPlayers();
         this.game.addObserver(this);
@@ -153,7 +138,7 @@ public final class ServerGame implements GameObserver {
         TimerTask gameUpdateTask = new TimerTask() {
             @Override
             public void run() {
-                game.makeAllPlayersMove(Map.copyOf(playersMoves));
+                game.moveAllSnakes(Map.copyOf(playersMoves));
                 playersMoves.clear();
             }
         };
@@ -209,7 +194,7 @@ public final class ServerGame implements GameObserver {
     }
 
     private void chooseNewDeputy() {
-        Optional<Player> neighborOpt = playersLastSeen.keySet().stream().findAny();
+        Optional<Player> neighborOpt = playersLastSeen.keySet().stream().filter(player -> player.getRole() != NodeRole.MASTER).findAny();
         neighborOpt.ifPresentOrElse(
                 this::setDeputy,
                 () -> logger.warn("Cant chose deputy")
@@ -217,15 +202,8 @@ public final class ServerGame implements GameObserver {
     }
 
     private void setDeputy(@NotNull Player deputy) {
-        sendMessage(deputy.getNetNode(), new RoleChangeMessage(NodeRole.MASTER, NodeRole.DEPUTY, msgSeq.getAndIncrement(), master.getId(), deputy.getId()))
-                .thenAccept(message -> {
-                    if (message.getType() == MessageType.ACK) {
-                        this.deputy = deputy;
-                    }
-                    else {
-                        logger.error("Potential deputy didn't send ACK message");
-                    }
-                });
+        this.deputy = deputy;
+        sendMessage(deputy.getNetNode(), new RoleChangeMessage(NodeRole.MASTER, NodeRole.DEPUTY, msgSeq.getAndIncrement(), master.getId(), deputy.getId()));
     }
 
     private boolean isDisconnected(@NotNull Instant moment) {
@@ -233,7 +211,7 @@ public final class ServerGame implements GameObserver {
     }
 
     private void handle(@NotNull NetNode sender, @NotNull JoinMessage joinMsg) {
-        if (!validateNewPlayer(sender, joinMsg.getPlayerName())) {
+        if (!validateNewPlayer(sender, joinMsg)) {
             return;
         }
         registerNewPlayer(sender, joinMsg.getPlayerName())
@@ -241,15 +219,18 @@ public final class ServerGame implements GameObserver {
                             logger.debug("NetNode=" + sender + " was successfully registered as player=" + player);
                             player.setRole(NodeRole.NORMAL);
                             player.setScore(0);
+                            if (deputy == null) {
+                                chooseNewDeputy();
+                            }
                             sendMessageWithoutConfirmation(player.getNetNode(), new AckMessage(joinMsg.getMessageSequence(), master.getId(), player.getId()));
                         }
                 );
     }
 
-    private boolean validateNewPlayer(@NotNull NetNode sender, @NotNull String playerName) {
-        if (playersLastSeen.keySet().stream().anyMatch(player -> player.getName().equals(playerName))) {
+    private boolean validateNewPlayer(@NotNull NetNode sender, @NotNull JoinMessage joinMsg) {
+        if (playersLastSeen.keySet().stream().anyMatch(player -> player.getName().equals(joinMsg.getPlayerName()))) {
             logger.error("Node=" + sender + " already registered as player");
-            sendMessageWithoutConfirmation(sender, new ErrorMessage("Player already exist", msgSeq.getAndIncrement()));
+            sendMessageWithoutConfirmation(sender, new ErrorMessage("Player already exist", joinMsg.getMessageSequence()));
             return false;
         }
         return true;
@@ -258,9 +239,9 @@ public final class ServerGame implements GameObserver {
     @NotNull
     private Optional<Player> registerNewPlayer(@NotNull NetNode netNode, @NotNull String playerName) {
         try {
-            Player player = game.registrationNewPlayer(playerName, netNode);
+            Player player = game.registerNewPlayer(playerName, netNode);
             playersLastSeen.put(player, Instant.now());
-            playersMoves.put(player, game.getPlayersWithSnakes().get(player).getDirection());
+            playersMoves.put(player, game.getSnakeByPlayer(player).getDirection());
             return Optional.of(player);
         } catch (IllegalStateException e) {
             logger.debug("Cant place player on field because no space");
@@ -307,6 +288,7 @@ public final class ServerGame implements GameObserver {
             return;
         }
         registerNewMove(senderAsPlayer, steerMsg.getDirection());
+        sendMessageWithoutConfirmation(sender, new AckMessage(steerMsg.getMessageSequence(), -1, -1));
         logger.debug("NetNode=" + sender + " as player=" + senderAsPlayer + " make move with direction=" + steerMsg.getDirection());
     }
 
@@ -328,6 +310,7 @@ public final class ServerGame implements GameObserver {
         }
         timer.cancel();
         receiveThread.interrupt();
+        socket.stop();
     }
 
     private void sendMessageWithoutConfirmation(NetNode node, Message message)  {
@@ -339,7 +322,7 @@ public final class ServerGame implements GameObserver {
         }
     }
 
-    private CompletableFuture<Message> sendMessage(NetNode node, Message message) {
+    private Message sendMessage(NetNode node, Message message) {
         return socket.send(message, node.getAddress(), node.getPort());
     }
 

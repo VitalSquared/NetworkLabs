@@ -14,7 +14,7 @@ import ru.nsu.spirin.snake.datatransfer.messages.MessageType;
 import ru.nsu.spirin.snake.datatransfer.messages.RoleChangeMessage;
 import ru.nsu.spirin.snake.datatransfer.messages.StateMessage;
 import ru.nsu.spirin.snake.datatransfer.messages.SteerMessage;
-import ru.nsu.spirin.snake.game.GameState;
+import ru.nsu.spirin.snake.gamehandler.GameState;
 import ru.nsu.spirin.snake.datatransfer.NetNode;
 import ru.nsu.spirin.snake.datatransfer.messages.JoinMessage;
 import ru.nsu.spirin.snake.datatransfer.messages.Message;
@@ -30,7 +30,8 @@ import java.net.UnknownHostException;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.*;
-import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.Executor;
+import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicLong;
 
 @RequiredArgsConstructor
@@ -58,6 +59,8 @@ public final class GameNetwork implements NetworkHandler {
     private Timer timer = new Timer();
     private Timer masterCheckTimer = new Timer();
 
+    private final Executor executor = Executors.newFixedThreadPool(3);
+
     @Override
     public void startNewGame() {
         if (null != activeServerGame) {
@@ -82,6 +85,7 @@ public final class GameNetwork implements NetworkHandler {
             startSendPingMessages();
             startHandleReceivedMessages();
             startSendPingMessages();
+            changeNodeRole(NodeRole.MASTER);
         }
         catch (SocketException e) {
             e.printStackTrace();
@@ -94,8 +98,11 @@ public final class GameNetwork implements NetworkHandler {
             activeServerGame.stop();
             activeServerGame = null;
         }
-        var complFuture = sendMessage(gameOwner, new JoinMessage(playerName, msgSeq.get()));
-        complFuture.thenAccept(ackMessage -> {
+        executor.execute(() -> {
+            Message ackMessage = sendMessage(gameOwner, new JoinMessage(playerName, msgSeq.get()));
+            if (ackMessage == null) {
+                return;
+            }
             if (ackMessage.getType() == MessageType.ERROR) {
                 showError(((ErrorMessage)ackMessage).getErrorMessage());
                 return;
@@ -122,16 +129,25 @@ public final class GameNetwork implements NetworkHandler {
 
     @Override
     public void handleMove(@NotNull Direction direction) {
-        sendMessageWithoutConfirmation(master, new SteerMessage(direction, msgSeq.getAndIncrement()));
+        executor.execute(() -> {
+            sendMessage(master, new SteerMessage(direction, msgSeq.getAndIncrement()));
+        });
     }
 
     @Override
     public void exit() {
+        if (master != null) {
+            sendMessageWithoutConfirmation(master, new RoleChangeMessage(nodeRole, NodeRole.VIEWER, msgSeq.getAndIncrement(), playerID, masterID));
+        }
+        if (activeServerGame != null) {
+            activeServerGame.stop();
+        }
         masterCheckTimer.cancel();
         timer.cancel();
-        if (null != this.activeServerGame) {
-            this.activeServerGame.stop();
-        }
+        activeServerGame = null;
+        master = null;
+        gameState = null;
+        rdtSocket.stop();
     }
 
     private void startHandleReceivedMessages() {
@@ -168,7 +184,7 @@ public final class GameNetwork implements NetworkHandler {
         this.masterLastSeen = Instant.now();
         this.deputy = StateUtils.getDeputyFromState(gameState);
         if (this.gameState != null && this.gameState.getStateID() >= gameState.getStateID()) {
-            logger.warn("Received state with id=" + gameState.getStateID() + " less then last game state id=" + this.gameState.getStateID());
+            logger.warn("Received state with id=" + gameState.getStateID() + " less then last gamehandler state id=" + this.gameState.getStateID());
             return;
         }
         this.gameState = gameState;
@@ -187,11 +203,6 @@ public final class GameNetwork implements NetworkHandler {
                          roleChangeMsg.getReceiverRole() == NodeRole.VIEWER) {
                     lose();
                 }
-                else {
-                    logger.warn("Unsupported roles at role change message=" + roleChangeMsg + " from=" + sender);
-                    throw new IllegalArgumentException(
-                            "Unsupported roles at role change message=" + roleChangeMsg + " from=" + sender);
-                }
             }
             case NORMAL -> {
                 if (roleChangeMsg.getSenderRole() == NodeRole.MASTER && roleChangeMsg.getReceiverRole() == NodeRole.DEPUTY) {
@@ -208,11 +219,6 @@ public final class GameNetwork implements NetworkHandler {
                          roleChangeMsg.getReceiverRole() == NodeRole.VIEWER) {
                     lose();
                 }
-                else {
-                    logger.warn("Unsupported roles at role change message=" + roleChangeMsg + " from=" + sender);
-                    throw new IllegalArgumentException(
-                            "Unsupported roles at role change message=" + roleChangeMsg + " from=" + sender);
-                }
             }
             case VIEWER -> logger.info("VIEWER");
         }
@@ -222,6 +228,8 @@ public final class GameNetwork implements NetworkHandler {
         try {
             this.activeServerGame = new ServerGame(gameState.getGameConfig(), gameState, multicastInfo.getAddress(), multicastInfo.getPort());
             this.master = new NetNode(InetAddress.getByName("localhost"), activeServerGame.getSocket().getLocalPort());
+            this.deputy = null;
+            changeNodeRole(NodeRole.MASTER);
         }
         catch (Exception e) {
             e.printStackTrace();
@@ -255,9 +263,10 @@ public final class GameNetwork implements NetworkHandler {
             throw new IllegalStateException("Cant change role without config");
         }
         this.nodeRole = nodeRole;
+        logger.info("I am " + this.nodeRole);
     }
 
-    private CompletableFuture<Message> sendMessage(@NotNull NetNode receiver, @NotNull Message message) {
+    private Message sendMessage(@NotNull NetNode receiver, @NotNull Message message) {
         return rdtSocket.send(message, receiver.getAddress(), receiver.getPort());
     }
 

@@ -2,7 +2,7 @@ package ru.nsu.spirin.snake.client.view.javafx;
 
 import javafx.scene.paint.Color;
 import org.jetbrains.annotations.NotNull;
-import ru.nsu.spirin.snake.game.Player;
+import ru.nsu.spirin.snake.gamehandler.Player;
 
 import java.util.*;
 

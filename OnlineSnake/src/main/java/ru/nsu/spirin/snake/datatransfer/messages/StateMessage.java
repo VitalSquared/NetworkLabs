@@ -3,8 +3,8 @@ package ru.nsu.spirin.snake.datatransfer.messages;
 import lombok.Getter;
 import me.ippolitov.fit.snakes.SnakesProto;
 import org.jetbrains.annotations.NotNull;
-import ru.nsu.spirin.snake.game.GameState;
-import ru.nsu.spirin.snake.game.Player;
+import ru.nsu.spirin.snake.gamehandler.GameState;
+import ru.nsu.spirin.snake.gamehandler.Player;
 import ru.nsu.spirin.snake.utils.StateUtils;
 
 import java.util.List;
@@ -29,7 +29,7 @@ public final class StateMessage extends Message {
         var builder = SnakesProto.GameMessage.newBuilder();
 
         var stateBuilder = SnakesProto.GameMessage.StateMsg.newBuilder();
-        stateBuilder.setState(StateUtils.createStateForMessage(gameState));
+        stateBuilder.setState(StateUtils.createStateForMessage(this.gameState));
 
         builder.setState(stateBuilder.build());
         builder.setMsgSeq(getMessageSequence());

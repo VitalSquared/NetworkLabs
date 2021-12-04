@@ -17,7 +17,7 @@ public final class ErrorMessage extends Message {
         var builder = SnakesProto.GameMessage.newBuilder();
 
         var errorBuilder = SnakesProto.GameMessage.ErrorMsg.newBuilder();
-        errorBuilder.setErrorMessage(errorMessage);
+        errorBuilder.setErrorMessage(this.errorMessage);
 
         builder.setError(errorBuilder.build());
         builder.setMsgSeq(getMessageSequence());

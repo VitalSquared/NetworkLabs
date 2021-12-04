@@ -65,11 +65,11 @@ public final class MulticastReceiver {
                         NetNode sender = new NetNode(datagramPacket.getAddress(), datagramPacket.getPort());
                         Message message = MessageParser.deserializeMessage(datagramPacket);
                         if (message.getType() == MessageType.ANNOUNCEMENT) {
-                            gameInfos.put(parseGameInfo(sender, (AnnouncementMessage) message), Instant.now());
+                            this.gameInfos.put(parseGameInfo(sender, (AnnouncementMessage) message), Instant.now());
                         }
                     }
-                    gameInfos.entrySet().removeIf(entry -> Duration.between(entry.getValue(), Instant.now()).abs().toMillis() >= SO_TIMEOUT_MS);
-                    view.updateGameList(gameInfos.keySet());
+                    this.gameInfos.entrySet().removeIf(entry -> Duration.between(entry.getValue(), Instant.now()).abs().toMillis() >= SO_TIMEOUT_MS);
+                    this.view.updateGameList(this.gameInfos.keySet());
                 }
                 socket.leaveGroup(this.multicastInfo.getAddress());
             } catch (IOException e) {

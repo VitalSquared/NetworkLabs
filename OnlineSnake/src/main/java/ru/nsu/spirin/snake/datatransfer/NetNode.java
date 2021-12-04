@@ -9,13 +9,16 @@ import java.net.UnknownHostException;
 import java.util.Objects;
 
 public class NetNode implements Serializable {
-    private final @NotNull @Getter InetAddress address;
+    private static final int MIN_PORT = 0;
+    private static final int MAX_PORT = 0xFFFF;
+
+    private final @Getter InetAddress address;
     private final @Getter int port;
 
-    public NetNode(@NotNull InetAddress address, int port) {
-        this.address = Objects.requireNonNull(address, "Node address cant be null");
-        if (port <= 0) {
-            throw new IllegalArgumentException("Port must be positive");
+    public NetNode(InetAddress address, int port) {
+        this.address = address;
+        if (port < MIN_PORT || port > MAX_PORT) {
+            throw new IllegalArgumentException("Port must be in range [" + MIN_PORT + ", " + MAX_PORT + "]");
         }
         this.port = port;
     }
@@ -38,7 +41,7 @@ public class NetNode implements Serializable {
 
     @Override
     public int hashCode() {
-        return Objects.hash(address, port);
+        return Objects.hash(this.address, this.port);
     }
 
     @Override

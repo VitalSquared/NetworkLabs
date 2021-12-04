@@ -4,7 +4,7 @@ import lombok.Getter;
 import me.ippolitov.fit.snakes.SnakesProto;
 import me.ippolitov.fit.snakes.SnakesProto.GameConfig;
 import org.jetbrains.annotations.NotNull;
-import ru.nsu.spirin.snake.game.Player;
+import ru.nsu.spirin.snake.gamehandler.Player;
 import ru.nsu.spirin.snake.utils.PlayerUtils;
 
 import java.util.List;
@@ -28,12 +28,12 @@ public final class AnnouncementMessage extends Message {
 
         var announcementBuilder = SnakesProto.GameMessage.AnnouncementMsg.newBuilder();
         var gamePlayersBuilder = SnakesProto.GamePlayers.newBuilder();
-        for (var player : players) {
+        for (var player : this.players) {
             gamePlayersBuilder.addPlayers(PlayerUtils.createPlayerForMessage(player));
         }
         announcementBuilder.setPlayers(gamePlayersBuilder.build());
-        announcementBuilder.setConfig(config);
-        announcementBuilder.setCanJoin(canJoin);
+        announcementBuilder.setConfig(this.config);
+        announcementBuilder.setCanJoin(this.canJoin);
 
         builder.setAnnouncement(announcementBuilder.build());
         builder.setMsgSeq(getMessageSequence());

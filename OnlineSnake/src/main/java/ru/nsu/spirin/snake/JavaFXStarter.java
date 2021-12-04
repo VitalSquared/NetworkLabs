@@ -17,6 +17,7 @@ import ru.nsu.spirin.snake.client.controller.JavaFXController;
 import ru.nsu.spirin.snake.datatransfer.RDTSocket;
 import ru.nsu.spirin.snake.multicastreceiver.MulticastReceiver;
 
+import java.io.IOException;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
@@ -58,11 +59,13 @@ public final class JavaFXStarter extends Application {
 
             view.setStage(stage);
             view.setGameController(gameEventHandler);
+
+            stage.setTitle(playerName);
             stage.setScene(new Scene(root));
             stage.sizeToScene();
             stage.show();
         }
-        catch (Exception exception) {
+        catch (IOException exception) {
             logger.error(exception.getLocalizedMessage());
         }
     }

@@ -1,4 +1,4 @@
-package ru.nsu.spirin.snake.game;
+package ru.nsu.spirin.snake.gamehandler.game;
 
 public enum CellType {
     EMPTY,

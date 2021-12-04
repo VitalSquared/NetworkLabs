@@ -37,27 +37,34 @@ public final class MessageParser {
 
     public static Message deserializeMessage(DatagramPacket packet) throws ClassCastException, SerializationException, InvalidProtocolBufferException {
         GameMessage message = GameMessage.parseFrom(Arrays.copyOf(packet.getData(), packet.getLength()));
+        validate(message.hasMsgSeq(), "No message sequence");
         if (message.hasAck()) {
+            validate(message.hasSenderId(), "No sender id");
+            validate(message.hasReceiverId(), "No receiver id");
             return new AckMessage(
                     message.getMsgSeq(),
                     message.getSenderId(),
                     message.getReceiverId());
         }
         else if (message.hasAnnouncement()) {
+            validate(message.getAnnouncement().hasConfig(), "No config");
+            validate(message.getAnnouncement().hasPlayers(), "No players");
             return new AnnouncementMessage(
                     message.getAnnouncement().getConfig(),
                     PlayerUtils.getPlayerList(message.getAnnouncement().getPlayers().getPlayersList()),
-                    message.getAnnouncement().getCanJoin(),
+                    !message.getAnnouncement().hasCanJoin() || message.getAnnouncement().getCanJoin(),
                     message.getMsgSeq()
             );
         }
         else if (message.hasError()) {
+            validate(message.getError().hasErrorMessage(), "No error message");
             return new ErrorMessage(
                     message.getError().getErrorMessage(),
                     message.getMsgSeq()
             );
         }
         else if (message.hasJoin()) {
+            validate(message.getJoin().hasName(), "No player name");
             return new JoinMessage(
                     message.getJoin().getName(),
                     message.getMsgSeq()
@@ -67,6 +74,10 @@ public final class MessageParser {
             return new PingMessage(message.getMsgSeq());
         }
         else if (message.hasRoleChange()) {
+            validate(message.getRoleChange().hasSenderRole(), "No sender role");
+            validate(message.getRoleChange().hasReceiverRole(), "No receiver role");
+            validate(message.hasSenderId(), "No sender id");
+            validate(message.hasReceiverId(), "No receiver id");
             return new RoleChangeMessage(
                     message.getRoleChange().getSenderRole(),
                     message.getRoleChange().getReceiverRole(),
@@ -76,20 +87,29 @@ public final class MessageParser {
             );
         }
         else if (message.hasState()) {
+            validate(message.getState().hasState(), "No state");
             return new StateMessage(
                     StateUtils.getStateFromMessage(message.getState().getState()),
                     message.getMsgSeq()
             );
         }
         else if (message.hasSteer()) {
+            validate(message.getSteer().hasDirection(), "No direction");
             return new SteerMessage(
                     message.getSteer().getDirection(),
                     message.getMsgSeq()
             );
         }
         else {
-            logger.error("Can't deserialize message : Unable to cast to Message");
-            throw new SerializationException("Can't cast to Message");
+            logger.error("Can't deserialize message: No message");
+            throw new SerializationException("No message");
+        }
+    }
+
+    private void validate(boolean value, String errorMessage) {
+        if (!value) {
+            logger.error("Can't deserialize message: " + errorMessage);
+            throw new SerializationException(errorMessage);
         }
     }
 }

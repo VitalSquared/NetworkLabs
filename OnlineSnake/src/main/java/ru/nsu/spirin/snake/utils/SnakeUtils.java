@@ -2,7 +2,7 @@ package ru.nsu.spirin.snake.utils;
 
 import lombok.experimental.UtilityClass;
 import me.ippolitov.fit.snakes.SnakesProto;
-import ru.nsu.spirin.snake.game.Snake;
+import ru.nsu.spirin.snake.gamehandler.Snake;
 
 import java.util.List;
 import java.util.stream.Collectors;

@@ -3,10 +3,10 @@ package ru.nsu.spirin.snake.utils;
 import lombok.experimental.UtilityClass;
 import me.ippolitov.fit.snakes.SnakesProto;
 import ru.nsu.spirin.snake.datatransfer.NetNode;
-import ru.nsu.spirin.snake.game.GameState;
-import ru.nsu.spirin.snake.game.Player;
-import ru.nsu.spirin.snake.game.Point2D;
-import ru.nsu.spirin.snake.game.Snake;
+import ru.nsu.spirin.snake.gamehandler.GameState;
+import ru.nsu.spirin.snake.gamehandler.Player;
+import ru.nsu.spirin.snake.gamehandler.Point2D;
+import ru.nsu.spirin.snake.gamehandler.Snake;
 
 @UtilityClass
 public final class StateUtils {

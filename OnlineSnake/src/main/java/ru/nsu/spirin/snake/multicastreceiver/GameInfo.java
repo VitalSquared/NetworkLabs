@@ -4,7 +4,7 @@ import lombok.Getter;
 import me.ippolitov.fit.snakes.SnakesProto;
 import me.ippolitov.fit.snakes.SnakesProto.GameConfig;
 import org.jetbrains.annotations.NotNull;
-import ru.nsu.spirin.snake.game.Player;
+import ru.nsu.spirin.snake.gamehandler.Player;
 import ru.nsu.spirin.snake.datatransfer.NetNode;
 
 import java.util.List;
@@ -29,7 +29,7 @@ public final class GameInfo {
     private void setMasterNodeName() {
         for (var player : this.players) {
             if (player.getRole() == SnakesProto.NodeRole.MASTER) {
-                masterNodeName = player.getName();
+                this.masterNodeName = player.getName();
                 return;
             }
         }
@@ -49,6 +49,6 @@ public final class GameInfo {
 
     @Override
     public int hashCode() {
-        return Objects.hash(config, canJoin, players);
+        return Objects.hash(this.config, this.canJoin, this.players);
     }
 }
