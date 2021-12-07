@@ -8,11 +8,11 @@ import org.apache.log4j.Logger;
 import org.jetbrains.annotations.NotNull;
 import ru.nsu.spirin.snake.datatransfer.NetNode;
 import ru.nsu.spirin.snake.gamehandler.GameHandler;
-import ru.nsu.spirin.snake.gamehandler.GameObserver;
 import ru.nsu.spirin.snake.gamehandler.GameState;
 import ru.nsu.spirin.snake.gamehandler.Player;
 import ru.nsu.spirin.snake.gamehandler.Point2D;
 import ru.nsu.spirin.snake.gamehandler.Snake;
+import ru.nsu.spirin.snake.server.ServerHandler;
 import ru.nsu.spirin.snake.utils.PlayerUtils;
 
 import java.util.*;
@@ -34,25 +34,25 @@ public final class Game implements GameHandler {
     private final @Getter GameConfig config;
     private final GameField field;
     private final List<Cell> fruits;
-    private final List<GameObserver> gameObservers;
+    private final ServerHandler serverHandler;
 
     private int stateID;
     private int playerIDCounter = 1;
 
-    public Game(GameConfig config) {
+    public Game(GameConfig config, ServerHandler serverHandler) {
         this.config = config;
+        this.serverHandler = serverHandler;
         this.field = new GameField(this.config.getWidth(), this.config.getHeight());
         this.stateID = 0;
-        this.gameObservers = new ArrayList<>();
         this.fruits = new ArrayList<>(this.config.getFoodStatic());
         this.generateFruits();
     }
 
-    public Game(GameState state) {
+    public Game(GameState state, ServerHandler serverHandler) {
         this.config = state.getGameConfig();
+        this.serverHandler = serverHandler;
         this.field = new GameField(this.config.getWidth(), this.config.getHeight());
-        this.stateID = state.getStateID();
-        this.gameObservers = new ArrayList<>();
+        this.stateID = state.getStateID() + 1;
 
         state.getSnakes().forEach(snake -> {
             snake.getPoints().forEach(point -> this.field.set(point, CellType.SNAKE));
@@ -73,25 +73,6 @@ public final class Game implements GameHandler {
             this.field.set(fruit, CellType.FRUIT);
             this.fruits.add(new Cell(fruit, CellType.FRUIT));
         });
-    }
-
-    @Override
-    public void addObserver(GameObserver gameObserver) {
-        this.gameObservers.add(gameObserver);
-        notifyObservers();
-    }
-
-    @Override
-    public void removeObserver(GameObserver gameObserver) {
-        this.gameObservers.remove(gameObserver);
-    }
-
-    @Override
-    public void notifyObservers() {
-        GameState gameState = generateGameState();
-        for (GameObserver gameObserver : this.gameObservers) {
-            gameObserver.update(gameState);
-        }
     }
 
     @Override
@@ -140,7 +121,7 @@ public final class Game implements GameHandler {
             markPlayerInactive(player);
         });
         this.playersForRemove.clear();
-        notifyObservers();
+        serverHandler.update(generateGameState());
     }
 
     @Override

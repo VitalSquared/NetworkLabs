@@ -24,8 +24,15 @@ public final class SnakeUtils {
     }
 
     public static List<Snake> getSnakeList(List<SnakesProto.GameState.Snake> snakes, SnakesProto.GameConfig config) {
-        return snakes.stream().map(
-                snake -> new Snake(snake.getPlayerId(), PointUtils.getPointList(snake.getPointsList()), snake.getState(), snake.getHeadDirection(), config.getWidth(), config.getHeight())
+        return snakes.stream().map(snake ->
+                new Snake(
+                        snake.getPlayerId(),
+                        PointUtils.getPointList(snake.getPointsList()),
+                        snake.getState(),
+                        snake.getHeadDirection(),
+                        config.getWidth(),
+                        config.getHeight()
+                )
         ).collect(Collectors.toList());
     }
 }

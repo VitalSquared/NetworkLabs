@@ -11,6 +11,7 @@ import ru.nsu.spirin.snake.gamehandler.Snake;
 import java.net.UnknownHostException;
 import java.util.List;
 import java.util.Objects;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 @UtilityClass
@@ -32,6 +33,15 @@ public final class PlayerUtils {
     public static Player findPlayerBySnake(Snake snake, List<Player> playerList) {
         for (var player : playerList) {
             if (player.getId() == snake.getPlayerID()) {
+                return player;
+            }
+        }
+        return null;
+    }
+
+    public static Player findPlayerByAddress(NetNode node, Set<Player> players) {
+        for (var player : players) {
+            if (player.getNetNode().equals(node)) {
                 return player;
             }
         }

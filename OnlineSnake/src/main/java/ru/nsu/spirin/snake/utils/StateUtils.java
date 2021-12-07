@@ -43,7 +43,7 @@ public final class StateUtils {
 
     public static String getMasterNameFromState(GameState state) {
         for (var player : state.getActivePlayers()) {
-            if (player.getRole() == SnakesProto.NodeRole.MASTER) {
+            if (SnakesProto.NodeRole.MASTER.equals(player.getRole())) {
                 return player.getName();
             }
         }
@@ -52,7 +52,7 @@ public final class StateUtils {
 
     public static NetNode getDeputyFromState(GameState state) {
         for (var player : state.getActivePlayers()) {
-            if (player.getRole() == SnakesProto.NodeRole.DEPUTY) {
+            if (SnakesProto.NodeRole.DEPUTY.equals(player.getRole())) {
                 return player.getNetNode();
             }
         }

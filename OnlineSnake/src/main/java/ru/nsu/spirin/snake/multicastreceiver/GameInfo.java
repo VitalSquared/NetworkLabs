@@ -40,7 +40,7 @@ public final class GameInfo {
         if (this == object) {
             return true;
         }
-        if (object == null || getClass() != object.getClass()) {
+        if (null == object || getClass() != object.getClass()) {
             return false;
         }
         GameInfo other = (GameInfo) object;

@@ -7,8 +7,7 @@ import ru.nsu.spirin.snake.gamehandler.Point2D;
 import java.util.Objects;
 
 public final class Cell {
-    private final @Getter
-    Point2D point;
+    private final @Getter Point2D point;
     private @Getter @Setter CellType type;
 
     public Cell(int x, int y, CellType type) {

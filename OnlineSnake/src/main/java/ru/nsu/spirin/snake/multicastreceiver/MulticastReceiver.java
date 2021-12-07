@@ -3,11 +3,11 @@ package ru.nsu.spirin.snake.multicastreceiver;
 import org.apache.log4j.Logger;
 import org.jetbrains.annotations.NotNull;
 import ru.nsu.spirin.snake.client.view.GameView;
-import ru.nsu.spirin.snake.datatransfer.MessageParser;
-import ru.nsu.spirin.snake.datatransfer.messages.Message;
-import ru.nsu.spirin.snake.datatransfer.messages.MessageType;
+import ru.nsu.spirin.snake.messages.MessageParser;
+import ru.nsu.spirin.snake.messages.messages.Message;
+import ru.nsu.spirin.snake.messages.messages.MessageType;
 import ru.nsu.spirin.snake.datatransfer.NetNode;
-import ru.nsu.spirin.snake.datatransfer.messages.AnnouncementMessage;
+import ru.nsu.spirin.snake.messages.messages.AnnouncementMessage;
 
 import java.io.IOException;
 import java.net.*;

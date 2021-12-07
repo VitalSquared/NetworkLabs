@@ -14,7 +14,7 @@ import ru.nsu.spirin.snake.config.ConfigValidator;
 import ru.nsu.spirin.snake.client.view.javafx.JavaFXView;
 import ru.nsu.spirin.snake.client.network.GameNetwork;
 import ru.nsu.spirin.snake.client.controller.JavaFXController;
-import ru.nsu.spirin.snake.datatransfer.RDTSocket;
+import ru.nsu.spirin.snake.datatransfer.GameSocket;
 import ru.nsu.spirin.snake.multicastreceiver.MulticastReceiver;
 
 import java.io.IOException;
@@ -51,7 +51,7 @@ public final class JavaFXStarter extends Application {
             SplitPane root = loader.load();
 
             JavaFXView view = loader.getController();
-            this.gameNetwork = new GameNetwork(new RDTSocket(new DatagramSocket(), config.getNodeTimeoutMs()), config, playerName, view, multicastInfo);
+            this.gameNetwork = new GameNetwork(new GameSocket(new DatagramSocket(), config.getNodeTimeoutMs()), config, playerName, view, multicastInfo);
             JavaFXController gameEventHandler = new JavaFXController(config, playerName, this.gameNetwork, view);
 
             this.multicastReceiver = new MulticastReceiver(multicastInfo, view);

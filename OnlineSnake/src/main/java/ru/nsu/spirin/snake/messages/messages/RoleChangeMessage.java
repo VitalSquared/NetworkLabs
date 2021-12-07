@@ -1,4 +1,4 @@
-package ru.nsu.spirin.snake.datatransfer.messages;
+package ru.nsu.spirin.snake.messages.messages;
 
 import lombok.Getter;
 import me.ippolitov.fit.snakes.SnakesProto;

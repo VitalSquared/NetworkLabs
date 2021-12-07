@@ -1,4 +1,4 @@
-package ru.nsu.spirin.snake.datatransfer.messages;
+package ru.nsu.spirin.snake.messages.messages;
 
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
@@ -7,7 +7,7 @@ import lombok.RequiredArgsConstructor;
 public enum MessageType {
     STATE(true),
     ACK(false),
-    PING(false),
+    PING(true),
     ROLE_CHANGE(true),
     STEER(true),
     ANNOUNCEMENT(false),

@@ -1,19 +1,19 @@
-package ru.nsu.spirin.snake.datatransfer;
+package ru.nsu.spirin.snake.messages;
 
 import com.google.protobuf.InvalidProtocolBufferException;
 import lombok.experimental.UtilityClass;
 import me.ippolitov.fit.snakes.SnakesProto.GameMessage;
 import org.apache.commons.lang3.SerializationException;
 import org.apache.log4j.Logger;
-import ru.nsu.spirin.snake.datatransfer.messages.AckMessage;
-import ru.nsu.spirin.snake.datatransfer.messages.AnnouncementMessage;
-import ru.nsu.spirin.snake.datatransfer.messages.ErrorMessage;
-import ru.nsu.spirin.snake.datatransfer.messages.JoinMessage;
-import ru.nsu.spirin.snake.datatransfer.messages.Message;
-import ru.nsu.spirin.snake.datatransfer.messages.PingMessage;
-import ru.nsu.spirin.snake.datatransfer.messages.RoleChangeMessage;
-import ru.nsu.spirin.snake.datatransfer.messages.StateMessage;
-import ru.nsu.spirin.snake.datatransfer.messages.SteerMessage;
+import ru.nsu.spirin.snake.messages.messages.AckMessage;
+import ru.nsu.spirin.snake.messages.messages.AnnouncementMessage;
+import ru.nsu.spirin.snake.messages.messages.ErrorMessage;
+import ru.nsu.spirin.snake.messages.messages.JoinMessage;
+import ru.nsu.spirin.snake.messages.messages.Message;
+import ru.nsu.spirin.snake.messages.messages.PingMessage;
+import ru.nsu.spirin.snake.messages.messages.RoleChangeMessage;
+import ru.nsu.spirin.snake.messages.messages.StateMessage;
+import ru.nsu.spirin.snake.messages.messages.SteerMessage;
 import ru.nsu.spirin.snake.utils.PlayerUtils;
 import ru.nsu.spirin.snake.utils.StateUtils;
 

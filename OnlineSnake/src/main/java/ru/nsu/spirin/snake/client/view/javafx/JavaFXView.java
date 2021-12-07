@@ -80,7 +80,7 @@ public final class JavaFXView implements GameView {
 
     public void setStage(@NotNull Stage stage) {
         this.stage = stage;
-        this.stage.setOnCloseRequest(event -> close());
+        this.stage.setOnCloseRequest(event -> close(true));
         this.stage.addEventHandler(KeyEvent.KEY_RELEASED, event -> {
             if (null == this.gameController) {
                 throw new IllegalStateException("Cant move with undefined controller");
@@ -111,6 +111,7 @@ public final class JavaFXView implements GameView {
 
     @Override
     public void updateGameList(@NotNull Collection<GameInfo> gameInfos) {
+        this.activeGameButtons.clear();
         gameInfos.forEach(gameInfo -> {
             ActiveGameButton activeGameButton = new ActiveGameButton(gameInfo);
             this.activeGameButtons.add(activeGameButton);
@@ -145,16 +146,31 @@ public final class JavaFXView implements GameView {
     }
 
     private void setActionOnButtons() {
-        this.exitButton.setOnAction(event -> close());
+        this.exitButton.setOnAction(event -> close(false));
         this.newGameButton.setOnAction(event -> this.gameController.fireEvent(new NewGameEvent()));
     }
 
-    private void close() {
-        if (null == this.stage) {
-            throw new IllegalStateException("Cant close not initialized stage");
+    private void close(boolean closeStage) {
+        if (closeStage) {
+            if (null == this.stage) {
+                throw new IllegalStateException("Cant close not initialized stage");
+            }
+            this.stage.close();
         }
-        this.stage.close();
         this.gameController.fireEvent(new ExitEvent());
+
+
+        Platform.runLater(() -> {
+            this.foodAmount.setText("");
+            this.fieldSize.setText("");
+            this.gameOwner.setText("");
+        });
+        this.playersObservableList.clear();
+        for (int row = 0; row < gameConfig.getHeight(); row++) {
+            for (int col = 0; col < gameConfig.getWidth(); col++) {
+                this.fieldCells[row][col].setFill(EMPTY_CELL_COLOR);
+            }
+        }
     }
 
     private Optional<Direction> getDirectionByKeyCode(@NotNull KeyCode code) {
