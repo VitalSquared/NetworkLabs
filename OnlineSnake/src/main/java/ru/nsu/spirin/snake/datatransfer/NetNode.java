@@ -1,7 +1,6 @@
 package ru.nsu.spirin.snake.datatransfer;
 
 import lombok.Getter;
-import org.jetbrains.annotations.NotNull;
 
 import java.io.Serializable;
 import java.net.InetAddress;
@@ -23,7 +22,7 @@ public class NetNode implements Serializable {
         this.port = port;
     }
 
-    public NetNode(@NotNull String address, int port) throws UnknownHostException {
+    public NetNode(String address, int port) throws UnknownHostException {
         this(InetAddress.getByName(address), port);
     }
 

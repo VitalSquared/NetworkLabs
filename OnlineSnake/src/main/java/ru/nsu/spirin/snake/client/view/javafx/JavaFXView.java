@@ -191,7 +191,14 @@ public final class JavaFXView implements GameView {
             }
         }
         snakes.forEach((snake, color) ->
-                snake.getPoints().forEach(point -> this.fieldCells[point.getY()][point.getX()].setFill(color))
+                snake.getPoints().forEach(point -> {
+                    Color pointColor = snake.isSnakeHead(point) ?
+                            ((color.darker().equals(color)) ?
+                                    color.brighter() :
+                                    color.darker()) :
+                            color;
+                    this.fieldCells[point.getY()][point.getX()].setFill(pointColor);
+                })
         );
         state.getFruits().forEach(fruit -> this.fieldCells[fruit.getY()][fruit.getX()].setFill(FRUIT_COLOR));
     }

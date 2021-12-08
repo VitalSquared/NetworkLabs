@@ -14,15 +14,14 @@ public final class PlayerColorMapper {
             Color.RED,
             Color.BLUE,
             Color.ORANGE,
-            Color.PURPLE,
-            Color.PINK
+            Color.PURPLE
     );
 
     private static final Color ZOMBIE_SNAKE_COLOR = Color.BLACK;
 
     public PlayerColorMapper() {
         this.playerColors = new HashMap<>();
-        this.prevColorIndex = 0;
+        this.prevColorIndex = new Random().nextInt(snakeColors.size());
     }
 
     @NotNull

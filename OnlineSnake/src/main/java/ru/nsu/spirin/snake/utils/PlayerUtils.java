@@ -51,17 +51,35 @@ public final class PlayerUtils {
     public static List<Player> getPlayerList(List<GamePlayer> gamePlayers) {
         return gamePlayers.stream().map(
                 gamePlayer -> {
+                    if (!validateGamePlayer(gamePlayer)) {
+                        logger.error("Player doesn't have required fields");
+                        return null;
+                    }
+
                     Player player = null;
                     try {
-                        player = new Player(gamePlayer.getName(), gamePlayer.getId(), new NetNode(gamePlayer.getIpAddress(), gamePlayer.getPort()));
+                        player = new Player(
+                                gamePlayer.getName(),
+                                gamePlayer.getId(),
+                                new NetNode(gamePlayer.getIpAddress(), gamePlayer.getPort()));
                         player.setRole(gamePlayer.getRole());
                         player.setScore(gamePlayer.getScore());
                     }
                     catch (UnknownHostException e) {
                         logger.error(e.getLocalizedMessage());
                     }
+
                     return player;
                 }
         ).filter(Objects::nonNull).collect(Collectors.toList());
+    }
+
+    private static boolean validateGamePlayer(GamePlayer gamePlayer) {
+        return gamePlayer.hasName() &&
+               gamePlayer.hasId() &&
+               gamePlayer.hasIpAddress() &&
+               gamePlayer.hasPort() &&
+               gamePlayer.hasRole() &&
+               gamePlayer.hasScore();
     }
 }

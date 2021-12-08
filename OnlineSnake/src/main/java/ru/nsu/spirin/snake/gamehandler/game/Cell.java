@@ -41,7 +41,7 @@ public final class Cell {
         if (this == object) {
             return true;
         }
-        if (null == object || getClass() != object.getClass()) {
+        if (!(object instanceof Cell)) {
             return false;
         }
         Cell other = (Cell) object;

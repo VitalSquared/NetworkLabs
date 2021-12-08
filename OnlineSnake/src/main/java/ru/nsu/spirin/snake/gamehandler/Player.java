@@ -4,7 +4,6 @@ import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.Setter;
 import me.ippolitov.fit.snakes.SnakesProto.NodeRole;
-import org.jetbrains.annotations.NotNull;
 import ru.nsu.spirin.snake.datatransfer.NetNode;
 
 import java.io.Serializable;
@@ -12,7 +11,7 @@ import java.util.Objects;
 
 @RequiredArgsConstructor
 public final class Player implements Serializable {
-    private final @NotNull @Getter String name;
+    private final @Getter String name;
     private final @Getter int id;
     private final @Getter NetNode netNode;
     private @Getter @Setter NodeRole role = NodeRole.NORMAL;
@@ -32,7 +31,7 @@ public final class Player implements Serializable {
         if (this == object) {
             return true;
         }
-        if (object == null || getClass() != object.getClass()) {
+        if (!(object instanceof Player)) {
             return false;
         }
         Player other = (Player) object;

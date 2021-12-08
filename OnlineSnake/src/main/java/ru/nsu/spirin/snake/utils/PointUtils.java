@@ -18,7 +18,7 @@ public final class PointUtils {
             return newCoordinate % coordinateLimit;
         }
         else if (newCoordinate < 0) {
-            return coordinateLimit - 1;
+            return coordinateLimit + newCoordinate;
         }
         return newCoordinate;
     }

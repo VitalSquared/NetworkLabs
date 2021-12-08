@@ -3,16 +3,13 @@ package ru.nsu.spirin.snake.messages.messages;
 import lombok.Getter;
 import me.ippolitov.fit.snakes.SnakesProto;
 import me.ippolitov.fit.snakes.SnakesProto.Direction;
-import org.jetbrains.annotations.NotNull;
-
-import java.util.Objects;
 
 public final class SteerMessage extends Message {
-    private final @NotNull @Getter Direction direction;
+    private final @Getter Direction direction;
 
-    public SteerMessage(@NotNull Direction direction, long messageSequence) {
-        super(MessageType.STEER, messageSequence, -1, -1);
-        this.direction = Objects.requireNonNull(direction, "Direction cant be null");
+    public SteerMessage(Direction direction, long messageSequence, int senderID, int receiverID) {
+        super(MessageType.STEER, messageSequence, senderID, receiverID);
+        this.direction = direction;
     }
 
     @Override

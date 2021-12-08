@@ -11,7 +11,10 @@ import ru.nsu.spirin.snake.messages.messages.MessageType;
 
 import java.io.IOException;
 import java.net.DatagramPacket;
-import java.net.DatagramSocket;
+import java.net.InetAddress;
+import java.net.InetSocketAddress;
+import java.net.MulticastSocket;
+import java.net.NetworkInterface;
 import java.time.Instant;
 import java.util.HashMap;
 import java.util.Map;
@@ -22,7 +25,7 @@ import java.util.TimerTask;
 public final class GameSocket implements RDTSocket {
     private static final Logger logger = Logger.getLogger(GameSocket.class);
 
-    private final DatagramSocket socket;
+    private final MulticastSocket socket;
     private final int sendDelayMs;
 
     private final Map<Long, Message> responses = new HashMap<>();
@@ -31,6 +34,12 @@ public final class GameSocket implements RDTSocket {
 
     private Thread receiver = null;
     private Timer timer = new Timer();
+
+    public GameSocket(NetworkInterface networkInterface, int sendDelayMs) throws IOException {
+        this.socket = new MulticastSocket();
+        this.socket.setNetworkInterface(networkInterface);
+        this.sendDelayMs = sendDelayMs;
+    }
 
     @Override
     public void start() {
@@ -41,12 +50,18 @@ public final class GameSocket implements RDTSocket {
 
     @Override
     public void stop() {
-        if (this.receiver != null) {
+        if (null != this.receiver) {
             this.receiver.interrupt();
         }
         this.timer.cancel();
-        responses.clear();
-        receivedMessages.clear();
+        this.responses.clear();
+        this.receivedMessages.clear();
+        this.sendTasks.clear();
+    }
+
+    @Override
+    public InetAddress getAddress() {
+        return this.socket.getLocalAddress();
     }
 
     @Override
@@ -86,9 +101,9 @@ public final class GameSocket implements RDTSocket {
             }
         }
 
-        synchronized (responses) {
-            result = responses.get(message.getMessageSequence());
-            responses.remove(message.getMessageSequence());
+        synchronized (this.responses) {
+            result = this.responses.get(message.getMessageSequence());
+            this.responses.remove(message.getMessageSequence());
         }
         return result;
     }
@@ -108,7 +123,9 @@ public final class GameSocket implements RDTSocket {
             }
         };
         this.timer.schedule(task, 0, this.sendDelayMs);
-        this.sendTasks.put(message.getMessageSequence(), task);
+        synchronized (this.sendTasks) {
+            this.sendTasks.put(message.getMessageSequence(), task);
+        }
     }
 
     @Override
@@ -124,24 +141,25 @@ public final class GameSocket implements RDTSocket {
     @Override
     public MessageOwner receive() {
         MessageOwner received;
-        synchronized (receivedMessages) {
-            while (receivedMessages.isEmpty()) {
+        synchronized (this.receivedMessages) {
+            while (this.receivedMessages.isEmpty()) {
                 try {
-                    receivedMessages.wait();
+                    this.receivedMessages.wait();
                 }
-                catch (InterruptedException e) {
-                    e.printStackTrace();
+                catch (InterruptedException exception) {
+                    logger.error(exception.getLocalizedMessage());
                 }
             }
-            Instant earliest = receivedMessages.keySet().stream().findFirst().get();
-            received = receivedMessages.get(earliest);
-            receivedMessages.remove(earliest);
+
+            Instant earliest = this.receivedMessages.keySet().stream().findFirst().get();
+            received = this.receivedMessages.get(earliest);
+            this.receivedMessages.remove(earliest);
         }
         return received;
     }
 
     @Override
-    public void removePendingMessages(long messageSequence) {
+    public void removePendingMessage(long messageSequence) {
         synchronized (this.sendTasks) {
             this.sendTasks.remove(messageSequence);
             this.sendTasks.notifyAll();
@@ -149,19 +167,20 @@ public final class GameSocket implements RDTSocket {
     }
 
     private void addReceivedMessage(@NotNull NetNode sender, @NotNull Message gameMessage) {
-        if (gameMessage.getType() == MessageType.ACK || gameMessage.getType() == MessageType.ERROR) {
-            synchronized (responses) {
-                responses.put(gameMessage.getMessageSequence(), gameMessage);
+        if (MessageType.ACK.equals(gameMessage.getType()) || MessageType.ERROR.equals(gameMessage.getType())) {
+            synchronized (this.responses) {
+                this.responses.put(gameMessage.getMessageSequence(), gameMessage);
             }
             synchronized (this.sendTasks) {
                 TimerTask task = this.sendTasks.get(gameMessage.getMessageSequence());
-                if (task != null) {
+                if (null != task) {
                     task.cancel();
                 }
                 this.sendTasks.remove(gameMessage.getMessageSequence());
                 this.sendTasks.notifyAll();
             }
-            if (gameMessage.getType() == MessageType.ACK) {
+
+            if (MessageType.ACK.equals(gameMessage.getType())) {
                 return;
             }
         }
@@ -171,9 +190,9 @@ public final class GameSocket implements RDTSocket {
                     sender
             );
         }
-        synchronized (receivedMessages) {
-            receivedMessages.put(Instant.now(), new MessageOwner(gameMessage, sender));
-            receivedMessages.notifyAll();
+        synchronized (this.receivedMessages) {
+            this.receivedMessages.put(Instant.now(), new MessageOwner(gameMessage, sender));
+            this.receivedMessages.notifyAll();
         }
     }
 
@@ -190,7 +209,7 @@ public final class GameSocket implements RDTSocket {
                     addReceivedMessage(new NetNode(packet.getAddress(), packet.getPort()), message);
                 }
                 catch (IOException exception) {
-                    exception.printStackTrace();
+                    logger.error(exception.getLocalizedMessage());
                 }
             }
         }

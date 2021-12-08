@@ -3,8 +3,8 @@ package ru.nsu.spirin.snake.messages.messages;
 import me.ippolitov.fit.snakes.SnakesProto;
 
 public final class PingMessage extends Message {
-    public PingMessage(long messageSequence) {
-        super(MessageType.PING, messageSequence, -1, -1);
+    public PingMessage(long messageSequence, int senderID, int receiverID) {
+        super(MessageType.PING, messageSequence, senderID, receiverID);
     }
 
     @Override

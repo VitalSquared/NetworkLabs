@@ -4,6 +4,7 @@ import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 
 import java.io.Serializable;
+import java.util.Objects;
 
 @RequiredArgsConstructor
 public final class Point2D implements Serializable {
@@ -24,10 +25,7 @@ public final class Point2D implements Serializable {
 
     @Override
     public int hashCode() {
-        int hash = 7;
-        hash = 71 * hash + this.x;
-        hash = 71 * hash + this.y;
-        return hash;
+        return Objects.hash(this.x, this.y);
     }
 
     @Override

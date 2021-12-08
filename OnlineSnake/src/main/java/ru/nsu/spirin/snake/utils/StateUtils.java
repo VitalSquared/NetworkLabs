@@ -2,6 +2,7 @@ package ru.nsu.spirin.snake.utils;
 
 import lombok.experimental.UtilityClass;
 import me.ippolitov.fit.snakes.SnakesProto;
+import org.apache.log4j.Logger;
 import ru.nsu.spirin.snake.datatransfer.NetNode;
 import ru.nsu.spirin.snake.gamehandler.GameState;
 import ru.nsu.spirin.snake.gamehandler.Player;
@@ -10,7 +11,13 @@ import ru.nsu.spirin.snake.gamehandler.Snake;
 
 @UtilityClass
 public final class StateUtils {
+    private static final Logger logger = Logger.getLogger(StateUtils.class);
+
     public static GameState getStateFromMessage(SnakesProto.GameState state) {
+        if (!validateGameState(state)) {
+            logger.info("Game state doesn't have required fields");
+            return null;
+        }
         return new GameState(
                 PointUtils.getPointList(state.getFoodsList()),
                 PlayerUtils.getPlayerList(state.getPlayers().getPlayersList()),
@@ -18,6 +25,12 @@ public final class StateUtils {
                 state.getConfig(),
                 state.getStateOrder()
         );
+    }
+
+    private static boolean validateGameState(SnakesProto.GameState state) {
+        return state.hasStateOrder() &&
+               state.hasPlayers() &&
+               state.hasConfig();
     }
 
     public static SnakesProto.GameState createStateForMessage(GameState state) {
@@ -50,10 +63,10 @@ public final class StateUtils {
         return "";
     }
 
-    public static NetNode getDeputyFromState(GameState state) {
+    public static Player getDeputyFromState(GameState state) {
         for (var player : state.getActivePlayers()) {
             if (SnakesProto.NodeRole.DEPUTY.equals(player.getRole())) {
-                return player.getNetNode();
+                return player;
             }
         }
         return null;

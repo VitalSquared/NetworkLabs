@@ -2,12 +2,11 @@ package ru.nsu.spirin.snake.messages.messages;
 
 import lombok.Getter;
 import me.ippolitov.fit.snakes.SnakesProto;
-import org.jetbrains.annotations.NotNull;
 
 public final class JoinMessage extends Message {
     private final @Getter String playerName;
 
-    public JoinMessage(@NotNull String playerName, long messageSequence) {
+    public JoinMessage(String playerName, long messageSequence) {
         super(MessageType.JOIN, messageSequence, -1, -1);
         this.playerName = playerName;
     }

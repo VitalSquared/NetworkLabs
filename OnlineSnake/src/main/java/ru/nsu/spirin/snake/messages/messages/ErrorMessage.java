@@ -2,13 +2,12 @@ package ru.nsu.spirin.snake.messages.messages;
 
 import lombok.Getter;
 import me.ippolitov.fit.snakes.SnakesProto;
-import org.jetbrains.annotations.NotNull;
 
 public final class ErrorMessage extends Message {
     private final @Getter String errorMessage;
 
-    public ErrorMessage(@NotNull String errorMessage, long messageSequence) {
-        super(MessageType.ERROR, messageSequence, -1, -1);
+    public ErrorMessage(String errorMessage, long messageSequence, int senderID, int receiverID) {
+        super(MessageType.ERROR, messageSequence, senderID, receiverID);
         this.errorMessage = errorMessage;
     }
 

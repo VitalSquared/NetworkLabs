@@ -2,9 +2,11 @@ package ru.nsu.spirin.snake.messages;
 
 import com.google.protobuf.InvalidProtocolBufferException;
 import lombok.experimental.UtilityClass;
+import me.ippolitov.fit.snakes.SnakesProto;
 import me.ippolitov.fit.snakes.SnakesProto.GameMessage;
 import org.apache.commons.lang3.SerializationException;
 import org.apache.log4j.Logger;
+import ru.nsu.spirin.snake.gamehandler.GameState;
 import ru.nsu.spirin.snake.messages.messages.AckMessage;
 import ru.nsu.spirin.snake.messages.messages.AnnouncementMessage;
 import ru.nsu.spirin.snake.messages.messages.ErrorMessage;
@@ -39,8 +41,8 @@ public final class MessageParser {
         GameMessage message = GameMessage.parseFrom(Arrays.copyOf(packet.getData(), packet.getLength()));
         validate(message.hasMsgSeq(), "No message sequence");
         if (message.hasAck()) {
-            validate(message.hasSenderId(), "No sender id");
-            validate(message.hasReceiverId(), "No receiver id");
+            //validate(message.hasSenderId(), "No sender id");
+            //validate(message.hasReceiverId(), "No receiver id");
             return new AckMessage(
                     message.getMsgSeq(),
                     message.getSenderId(),
@@ -60,7 +62,9 @@ public final class MessageParser {
             validate(message.getError().hasErrorMessage(), "No error message");
             return new ErrorMessage(
                     message.getError().getErrorMessage(),
-                    message.getMsgSeq()
+                    message.getMsgSeq(),
+                    message.getSenderId(),
+                    message.getReceiverId()
             );
         }
         else if (message.hasJoin()) {
@@ -71,7 +75,7 @@ public final class MessageParser {
             );
         }
         else if (message.hasPing()) {
-            return new PingMessage(message.getMsgSeq());
+            return new PingMessage(message.getMsgSeq(), message.getSenderId(), message.getReceiverId());
         }
         else if (message.hasRoleChange()) {
             validate(message.getRoleChange().hasSenderRole(), "No sender role");
@@ -88,16 +92,24 @@ public final class MessageParser {
         }
         else if (message.hasState()) {
             validate(message.getState().hasState(), "No state");
+
+            GameState state = StateUtils.getStateFromMessage(message.getState().getState());
+            validate(null != state, "Couldn't parse state from message");
+
             return new StateMessage(
-                    StateUtils.getStateFromMessage(message.getState().getState()),
-                    message.getMsgSeq()
+                    state,
+                    message.getMsgSeq(),
+                    message.getSenderId(),
+                    message.getReceiverId()
             );
         }
         else if (message.hasSteer()) {
             validate(message.getSteer().hasDirection(), "No direction");
             return new SteerMessage(
                     message.getSteer().getDirection(),
-                    message.getMsgSeq()
+                    message.getMsgSeq(),
+                    message.getSenderId(),
+                    message.getReceiverId()
             );
         }
         else {

@@ -14,22 +14,22 @@ import ru.nsu.spirin.snake.config.ConfigValidator;
 import ru.nsu.spirin.snake.client.view.javafx.JavaFXView;
 import ru.nsu.spirin.snake.client.network.GameNetwork;
 import ru.nsu.spirin.snake.client.controller.JavaFXController;
-import ru.nsu.spirin.snake.datatransfer.GameSocket;
 import ru.nsu.spirin.snake.multicastreceiver.MulticastReceiver;
 
 import java.io.IOException;
-import java.net.DatagramSocket;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
+import java.net.NetworkInterface;
 
 public final class JavaFXStarter extends Application {
     private static final Logger logger = Logger.getLogger(JavaFXStarter.class);
 
     private static final String GAME_VIEW_FXML_PATH = "gameView.fxml";
-    private static final String MULTICAST_HOST = "239.192.0.4";
+    private static final String MULTICAST_HOST = "239.192.0.4"; //"239.192.0.4";
     private static final int MULTICAST_PORT = 9192;
 
     private static @Setter String playerName;
+    private static @Setter NetworkInterface networkInterface;
 
     private MulticastReceiver multicastReceiver = null;
     private GameNetwork gameNetwork = null;
@@ -51,14 +51,14 @@ public final class JavaFXStarter extends Application {
             SplitPane root = loader.load();
 
             JavaFXView view = loader.getController();
-            this.gameNetwork = new GameNetwork(new GameSocket(new DatagramSocket(), config.getNodeTimeoutMs()), config, playerName, view, multicastInfo);
-            JavaFXController gameEventHandler = new JavaFXController(config, playerName, this.gameNetwork, view);
+            this.gameNetwork = new GameNetwork(config, playerName, view, multicastInfo, networkInterface);
+            JavaFXController gameController = new JavaFXController(config, playerName, this.gameNetwork, view);
 
-            this.multicastReceiver = new MulticastReceiver(multicastInfo, view);
+            this.multicastReceiver = new MulticastReceiver(multicastInfo, view, networkInterface);
             this.multicastReceiver.start();
 
             view.setStage(stage);
-            view.setGameController(gameEventHandler);
+            view.setGameController(gameController);
 
             stage.setTitle(playerName);
             stage.setScene(new Scene(root));

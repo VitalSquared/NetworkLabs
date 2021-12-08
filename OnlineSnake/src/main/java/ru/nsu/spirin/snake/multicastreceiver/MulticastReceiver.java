@@ -1,7 +1,6 @@
 package ru.nsu.spirin.snake.multicastreceiver;
 
 import org.apache.log4j.Logger;
-import org.jetbrains.annotations.NotNull;
 import ru.nsu.spirin.snake.client.view.GameView;
 import ru.nsu.spirin.snake.messages.MessageParser;
 import ru.nsu.spirin.snake.messages.messages.Message;
@@ -10,25 +9,33 @@ import ru.nsu.spirin.snake.datatransfer.NetNode;
 import ru.nsu.spirin.snake.messages.messages.AnnouncementMessage;
 
 import java.io.IOException;
-import java.net.*;
+import java.net.DatagramPacket;
+import java.net.InetAddress;
+import java.net.InetSocketAddress;
+import java.net.MulticastSocket;
+import java.net.NetworkInterface;
+import java.net.SocketTimeoutException;
 import java.time.Duration;
 import java.time.Instant;
-import java.util.*;
+import java.util.HashMap;
+import java.util.Map;
 
 public final class MulticastReceiver {
     private static final Logger logger = Logger.getLogger(MulticastReceiver.class);
     private static final int BUFFER_SIZE = 4096;
     private static final int SO_TIMEOUT_MS = 3000;
 
-    private final @NotNull GameView view;
-    private final @NotNull Map<GameInfo, Instant> gameInfos = new HashMap<>();
+    private final GameView view;
     private final InetSocketAddress multicastInfo;
+    private final NetworkInterface networkInterface;
+    private final Thread checkerThread;
 
-    private final @NotNull Thread checkerThread;
+    private final Map<GameInfo, Instant> gameInfos = new HashMap<>();
 
-    public MulticastReceiver(@NotNull InetSocketAddress multicastInfo, @NotNull GameView view) {
-        validateAddress(Objects.requireNonNull(multicastInfo.getAddress()));
+    public MulticastReceiver(InetSocketAddress multicastInfo, GameView view, NetworkInterface networkInterface) {
+        validateAddress(multicastInfo.getAddress());
         this.multicastInfo = multicastInfo;
+        this.networkInterface = networkInterface;
         this.view = view;
         this.checkerThread = new Thread(getCheckerRunnable());
     }
@@ -50,35 +57,41 @@ public final class MulticastReceiver {
     private Runnable getCheckerRunnable() {
         return () -> {
             try (MulticastSocket socket = new MulticastSocket(this.multicastInfo.getPort())) {
-                socket.joinGroup(this.multicastInfo.getAddress());
-                socket.setSoTimeout(SO_TIMEOUT_MS);
                 byte[] buffer = new byte[BUFFER_SIZE];
+
+                socket.joinGroup(this.multicastInfo, this.networkInterface);
+                socket.setSoTimeout(SO_TIMEOUT_MS);
+
                 while (!Thread.currentThread().isInterrupted()) {
                     DatagramPacket datagramPacket = new DatagramPacket(buffer, BUFFER_SIZE);
                     boolean hasTimedOut = false;
+
                     try {
                         socket.receive(datagramPacket);
-                    } catch (SocketTimeoutException e) {
+                    }
+                    catch (SocketTimeoutException exception) {
                         hasTimedOut = true;
                     }
+
                     if (!hasTimedOut) {
                         NetNode sender = new NetNode(datagramPacket.getAddress(), datagramPacket.getPort());
                         Message message = MessageParser.deserializeMessage(datagramPacket);
-                        if (message.getType() == MessageType.ANNOUNCEMENT) {
-                            this.gameInfos.put(parseGameInfo(sender, (AnnouncementMessage) message), Instant.now());
+                        if (MessageType.ANNOUNCEMENT.equals(message.getType())) {
+                            this.gameInfos.put(createGameInfo(sender, (AnnouncementMessage) message), Instant.now());
                         }
                     }
+
                     this.gameInfos.entrySet().removeIf(entry -> Duration.between(entry.getValue(), Instant.now()).abs().toMillis() >= SO_TIMEOUT_MS);
                     this.view.updateGameList(this.gameInfos.keySet());
                 }
-                socket.leaveGroup(this.multicastInfo.getAddress());
-            } catch (IOException e) {
-                logger.error("Problem with multicast socket on port=" + this.multicastInfo.getPort(), e);
+                socket.leaveGroup(this.multicastInfo, this.networkInterface);
+            } catch (IOException exception) {
+                logger.error("Problem with multicast socket on port=" + this.multicastInfo.getPort(), exception);
             }
         };
     }
 
-    private GameInfo parseGameInfo(@NotNull NetNode sender, @NotNull AnnouncementMessage announcementMsg) {
+    private GameInfo createGameInfo(NetNode sender, AnnouncementMessage announcementMsg) {
         return new GameInfo(
                 announcementMsg.getConfig(),
                 sender,

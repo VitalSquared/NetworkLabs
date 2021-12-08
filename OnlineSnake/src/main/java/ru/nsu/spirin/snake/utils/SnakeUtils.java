@@ -2,13 +2,17 @@ package ru.nsu.spirin.snake.utils;
 
 import lombok.experimental.UtilityClass;
 import me.ippolitov.fit.snakes.SnakesProto;
+import org.apache.log4j.Logger;
 import ru.nsu.spirin.snake.gamehandler.Snake;
 
 import java.util.List;
+import java.util.Objects;
 import java.util.stream.Collectors;
 
 @UtilityClass
 public final class SnakeUtils {
+    private static final Logger logger = Logger.getLogger(SnakeUtils.class);
+
     public static SnakesProto.GameState.Snake createSnakeForMessage(Snake snake) {
         var builder = SnakesProto.GameState.Snake.newBuilder();
         builder.setPlayerId(snake.getPlayerID());
@@ -24,15 +28,27 @@ public final class SnakeUtils {
     }
 
     public static List<Snake> getSnakeList(List<SnakesProto.GameState.Snake> snakes, SnakesProto.GameConfig config) {
-        return snakes.stream().map(snake ->
-                new Snake(
-                        snake.getPlayerId(),
-                        PointUtils.getPointList(snake.getPointsList()),
-                        snake.getState(),
-                        snake.getHeadDirection(),
-                        config.getWidth(),
-                        config.getHeight()
-                )
-        ).collect(Collectors.toList());
+        return snakes.stream().map(snake -> {
+                    if (!validateSnake(snake)) {
+                        logger.info("Snake doesn't have required fields");
+                        return null;
+                    }
+                    return new Snake(
+                            snake.getPlayerId(),
+                            PointUtils.getPointList(snake.getPointsList()),
+                            snake.getState(),
+                            snake.getHeadDirection(),
+                            config.getWidth(),
+                            config.getHeight()
+                    );
+                }
+        ).filter(Objects::nonNull).collect(Collectors.toList());
+    }
+
+    private boolean validateSnake(SnakesProto.GameState.Snake snake) {
+        return snake.hasPlayerId() &&
+               snake.hasState() &&
+               snake.hasHeadDirection() &&
+               snake.getPointsCount() >= 2;
     }
 }

@@ -2,26 +2,24 @@ package ru.nsu.spirin.snake.messages.messages;
 
 import lombok.Getter;
 import me.ippolitov.fit.snakes.SnakesProto;
-import org.jetbrains.annotations.NotNull;
 import ru.nsu.spirin.snake.gamehandler.GameState;
 import ru.nsu.spirin.snake.gamehandler.Player;
 import ru.nsu.spirin.snake.utils.StateUtils;
 
 import java.util.List;
-import java.util.Objects;
 
 public final class StateMessage extends Message {
-    private final @NotNull @Getter GameState gameState;
-    private final @NotNull @Getter List<Player> playersNode;
+    private final @Getter GameState gameState;
+    private final @Getter List<Player> players;
 
-    public StateMessage(@NotNull GameState gameState, @NotNull List<Player> players, long messageSequence) {
-        super(MessageType.STATE, messageSequence, -1, -1);
-        this.gameState = Objects.requireNonNull(gameState, "Game state cant be null");
-        this.playersNode = Objects.requireNonNull(players, "Node-Players map cant be null");
+    public StateMessage(GameState gameState, List<Player> players, long messageSequence, int senderID, int receiverID) {
+        super(MessageType.STATE, messageSequence, senderID, receiverID);
+        this.gameState = gameState;
+        this.players = players;
     }
 
-    public StateMessage(@NotNull GameState gameState, long messageSequence) {
-        this(gameState, gameState.getActivePlayers(), messageSequence);
+    public StateMessage(GameState gameState, long messageSequence, int senderID, int receiverID) {
+        this(gameState, gameState.getActivePlayers(), messageSequence, senderID, receiverID);
     }
 
     @Override

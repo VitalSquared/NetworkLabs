@@ -23,16 +23,19 @@ import ru.nsu.spirin.snake.messages.messages.PingMessage;
 import ru.nsu.spirin.snake.messages.messages.RoleChangeMessage;
 import ru.nsu.spirin.snake.messages.messages.StateMessage;
 import ru.nsu.spirin.snake.messages.messages.SteerMessage;
-import ru.nsu.spirin.snake.utils.NetUtils;
 import ru.nsu.spirin.snake.utils.PlayerUtils;
 
-import java.net.DatagramSocket;
+import java.io.IOException;
+import java.net.InetAddress;
 import java.net.InetSocketAddress;
-import java.net.SocketException;
+import java.net.NetworkInterface;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 import java.util.concurrent.atomic.AtomicLong;
 
 public final class ServerGame implements ServerHandler {
@@ -45,10 +48,12 @@ public final class ServerGame implements ServerHandler {
     private final Map<Player, Instant> playersLastSeen = new ConcurrentHashMap<>();
     private final AtomicLong msgSeq = new AtomicLong(0);
     private final MessageHandler messageHandler = createMessageHandler();
+    private final ExecutorService executorService = Executors.newFixedThreadPool(1);
 
     private final @Getter RDTSocket socket;
     private final InetSocketAddress multicastAddress;
 
+    private Future<?> activeDeputyTask = null;
     private Timer timer = new Timer();
     private Thread receiveThread = null;
     private Player masterPlayer = null;
@@ -56,15 +61,15 @@ public final class ServerGame implements ServerHandler {
     private Player potentialDeputyPlayer = null;
     private boolean isDeputyBeingChosen = false;
 
-    public ServerGame(GameConfig gameConfig, InetSocketAddress multicastAddress, int masterPort, String masterName) throws SocketException {
+    public ServerGame(GameConfig gameConfig, InetSocketAddress multicastAddress, InetAddress masterAddress, int masterPort, String masterName, NetworkInterface networkInterface) throws IOException {
         this.gameConfig = gameConfig;
         this.game = new Game(gameConfig, this);
         this.multicastAddress = multicastAddress;
-        this.socket = new GameSocket(new DatagramSocket(), gameConfig.getNodeTimeoutMs());
+        this.socket = new GameSocket(networkInterface, this.gameConfig.getPingDelayMs());
         this.socket.start();
 
         var playerOptional = registerNewPlayer(
-                new NetNode(NetUtils.getLocalhostAddress(), masterPort),
+                new NetNode(masterAddress, masterPort),
                 masterName
         );
         playerOptional.ifPresent(player -> {
@@ -77,20 +82,22 @@ public final class ServerGame implements ServerHandler {
         startReceivingMessages();
     }
 
-    public ServerGame(GameState gameState, InetSocketAddress multicastAddress) throws SocketException {
+    public ServerGame(GameState gameState, InetSocketAddress multicastAddress, NetworkInterface networkInterface) throws IOException {
         this.gameConfig = gameState.getGameConfig();
         this.game = new Game(gameState, this);
         this.multicastAddress = multicastAddress;
-        this.socket = new GameSocket(new DatagramSocket(), gameConfig.getNodeTimeoutMs());
+        this.socket = new GameSocket(networkInterface, this.gameConfig.getPingDelayMs());
         this.socket.start();
 
         gameState.getActivePlayers().forEach(player -> {
-            this.playersLastSeen.put(player, Instant.now());
-            this.playersMoves.put(player, this.game.getSnakeByPlayer(player).getDirection());
             player.setRole(NodeRole.MASTER.equals(player.getRole()) ? NodeRole.NORMAL : player.getRole());
-            player.setRole(NodeRole.DEPUTY.equals(player.getRole()) ? NodeRole.MASTER : NodeRole.NORMAL);
-            if (player.getRole() == NodeRole.MASTER) {
+            player.setRole(NodeRole.DEPUTY.equals(player.getRole()) ? NodeRole.MASTER : player.getRole());
+            if (NodeRole.MASTER.equals(player.getRole())) {
                 this.masterPlayer = player;
+            }
+            this.playersLastSeen.put(player, Instant.now());
+            if (!NodeRole.VIEWER.equals(player.getRole())) {
+                this.playersMoves.put(player, this.game.getSnakeByPlayer(player).getDirection());
             }
         });
 
@@ -103,7 +110,7 @@ public final class ServerGame implements ServerHandler {
         var playerList = new ArrayList<>(this.playersLastSeen.keySet());
         this.playersLastSeen.keySet()
                 .forEach(player -> this.socket.sendWithoutConfirm(
-                            new StateMessage(gameState, playerList, this.msgSeq.getAndIncrement()),
+                            new StateMessage(gameState, playerList, this.msgSeq.getAndIncrement(), masterPlayer.getId(), player.getId()),
                             player.getNetNode()
                         )
                 );
@@ -147,8 +154,7 @@ public final class ServerGame implements ServerHandler {
                         playersMoves.clear();
                     }
                 },
-                0,
-                gameConfig.getStateDelayMs());
+                0, this.gameConfig.getStateDelayMs());
     }
 
     private void startSendAnnouncementMessages() {
@@ -177,9 +183,11 @@ public final class ServerGame implements ServerHandler {
                             }
                         });
                         playersLastSeen.entrySet().removeIf(entry -> isDisconnected(entry.getValue()));
+
                         if (potentialDeputyPlayer != null && !playersLastSeen.containsKey(potentialDeputyPlayer)) {
                             potentialDeputyPlayer = null;
                             isDeputyBeingChosen = false;
+                            chooseNewDeputy();
                         }
                         if (deputyPlayer != null && !playersLastSeen.containsKey(deputyPlayer)) {
                             deputyPlayer = null;
@@ -201,33 +209,36 @@ public final class ServerGame implements ServerHandler {
         this.receiveThread.start();
     }
 
-    private void registerNewMove(@NotNull Player player, @NotNull Direction direction) {
+    private void registerNewMove(Player player, Direction direction) {
         this.playersMoves.put(player, direction);
     }
 
-    private void handleMessage(@NotNull NetNode sender, @NotNull Message message) {
-        Objects.requireNonNull(message, "Message cant be null");
-        Objects.requireNonNull(sender, "Sender cant be null");
+    private void handleMessage(NetNode sender, Message message) {
         switch (message.getType()) {
-            case ROLE_CHANGE -> messageHandler.handle(sender, (RoleChangeMessage) message);
-            case STEER -> messageHandler.handle(sender, (SteerMessage) message);
-            case JOIN -> messageHandler.handle(sender, (JoinMessage) message);
-            case PING -> messageHandler.handle(sender, (PingMessage) message);
-            case ERROR -> messageHandler.handle(sender, (ErrorMessage) message);
-            default -> throw new IllegalStateException("Cant handle this message type = " + message.getType());
+            case ROLE_CHANGE -> this.messageHandler.handle(sender, (RoleChangeMessage) message);
+            case STEER -> this.messageHandler.handle(sender, (SteerMessage) message);
+            case JOIN -> this.messageHandler.handle(sender, (JoinMessage) message);
+            case PING -> this.messageHandler.handle(sender, (PingMessage) message);
+            case ERROR -> this.messageHandler.handle(sender, (ErrorMessage) message);
+            default -> throw new IllegalStateException("Server: Cant handle this message type = " + message.getType());
         }
     }
 
     private void chooseNewDeputy() {
+        if (this.activeDeputyTask != null) {
+            this.activeDeputyTask.cancel(true);
+        }
         this.isDeputyBeingChosen = true;
-        Optional<Player> playerOptional = this.playersLastSeen.keySet().stream().filter(player -> player.getRole() != NodeRole.MASTER).findAny();
-        playerOptional.ifPresentOrElse(
-                this::setDeputyPlayer,
-                () -> {
-                    logger.warn("Cant chose deputy");
-                    this.isDeputyBeingChosen = false;
-                }
-        );
+        this.activeDeputyTask = this.executorService.submit(() -> {
+            Optional<Player> playerOptional = this.playersLastSeen.keySet().stream().filter(player -> player.getRole() != NodeRole.MASTER).findAny();
+            playerOptional.ifPresentOrElse(
+                    this::setDeputyPlayer,
+                    () -> {
+                        logger.warn("Cant chose deputy");
+                        this.isDeputyBeingChosen = false;
+                    }
+            );
+        });
     }
 
     private void setDeputyPlayer(@NotNull Player deputy) {
@@ -238,6 +249,7 @@ public final class ServerGame implements ServerHandler {
         );
         if (response instanceof AckMessage) {
             this.deputyPlayer = deputy;
+            this.deputyPlayer.setRole(NodeRole.DEPUTY);
         }
         this.potentialDeputyPlayer = null;
         this.isDeputyBeingChosen = false;
@@ -251,7 +263,7 @@ public final class ServerGame implements ServerHandler {
         if (this.playersLastSeen.keySet().stream().anyMatch(player -> player.getName().equals(joinMsg.getPlayerName()))) {
             logger.error("Node=" + sender + " already registered as player");
             this.socket.sendWithoutConfirm(
-                    new ErrorMessage("Player already exist", joinMsg.getMessageSequence()),
+                    new ErrorMessage("Player already exist", joinMsg.getMessageSequence(), masterPlayer.getId(), -1),
                     sender
             );
             return false;
@@ -269,7 +281,8 @@ public final class ServerGame implements ServerHandler {
         catch (IllegalStateException exception) {
             logger.debug("Cant place player on field because no space");
             this.socket.sendWithoutConfirm(
-                    new ErrorMessage("Cant place player on field because no space", this.msgSeq.getAndIncrement()),
+                    new ErrorMessage("Cant place player on field because no space", this.msgSeq.getAndIncrement(),
+                            masterPlayer.getId(), -1),
                     netNode
             );
             return Optional.empty();
@@ -283,7 +296,7 @@ public final class ServerGame implements ServerHandler {
             return;
         }
 
-        this.playersLastSeen.remove(player);
+        updateLastSeen(sender);
         this.playersMoves.remove(player);
         this.game.removePlayer(player);
     }
@@ -355,7 +368,7 @@ public final class ServerGame implements ServerHandler {
                     removePlayer(sender);
                 }
                 else {
-                    logger.warn("Unsupported roles at role change message=" + message + " from=" + sender);
+                    logger.warn("Server: Unsupported roles at role change message=" + message + " from=" + sender);
                     throw new IllegalArgumentException("Unsupported roles at role change message=" + message + " from=" + sender);
                 }
             }

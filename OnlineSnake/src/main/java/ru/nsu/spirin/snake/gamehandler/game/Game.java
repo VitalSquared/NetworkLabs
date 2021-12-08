@@ -66,7 +66,12 @@ public final class Game implements GameHandler {
             }
         });
 
-        this.players.addAll(state.getActivePlayers());
+        for (var player : state.getActivePlayers()) {
+            this.players.add(player);
+            if (player.getId() >= this.playerIDCounter) {
+                this.playerIDCounter = player.getId() + 1;
+            }
+        }
 
         this.fruits = new ArrayList<>(state.getFruits().size());
         state.getFruits().forEach(fruit -> {
@@ -121,7 +126,7 @@ public final class Game implements GameHandler {
             markPlayerInactive(player);
         });
         this.playersForRemove.clear();
-        serverHandler.update(generateGameState());
+        this.serverHandler.update(generateGameState());
     }
 
     @Override

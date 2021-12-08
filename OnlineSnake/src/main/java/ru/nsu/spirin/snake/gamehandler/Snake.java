@@ -17,12 +17,13 @@ public final class Snake implements Serializable {
     private final int fieldHeight;
 
     private @Getter Point2D head;
-    private  @Getter Point2D tail;
+    private @Getter Point2D tail;
 
     private @Getter @Setter int playerID = -1;
-    private final @Getter List<Point2D> points;
     private @Getter @Setter SnakeState state = SnakeState.ALIVE;
     private @Getter Direction direction;
+
+    private final @Getter List<Point2D> points;
 
     public Snake(Point2D head, Point2D tail, int fieldWidth, int fieldHeight) {
         this.fieldWidth = fieldWidth;
@@ -71,22 +72,23 @@ public final class Snake implements Serializable {
         throw new IllegalStateException("Cant calculate current direction");
     }
 
-    public void makeMove(Direction dir) {
-        if (null == dir) {
+    public void makeMove(Direction direction) {
+        if (null == direction) {
             makeMove();
             return;
         }
 
-        if (DirectionUtils.getReversed(dir).equals(this.direction)) {
-            dir = this.direction;  //Блокирует движение змейки в противоположном направлении
+        if (DirectionUtils.getReversed(direction).equals(this.direction)) {
+            direction = this.direction;
         }
-        this.direction = dir;
-        this.head = getNewHead(dir);
+
+        this.direction = direction;
+        this.head = getNewHead(direction);
         this.points.add(0, this.head);
     }
 
-    private Point2D getNewHead(Direction dir) {
-        return switch (dir) {
+    private Point2D getNewHead(Direction direction) {
+        return switch (direction) {
             case DOWN -> PointUtils.getPointBelow(this.head, this.fieldHeight);
             case UP -> PointUtils.getPointAbove(this.head, this.fieldHeight);
             case LEFT -> PointUtils.getPointToLeft(this.head, this.fieldWidth);
@@ -106,17 +108,21 @@ public final class Snake implements Serializable {
         this.tail = this.points.get(this.points.size() - 1);
     }
 
-    public boolean isSnakeBody(Point2D p) {
+    public boolean isSnakeBody(Point2D point) {
         for (int i = 1; i < this.points.size() - 1; i++) {
-            if (p.equals(this.points.get(i))) {
+            if (point.equals(this.points.get(i))) {
                 return true;
             }
         }
         return false;
     }
 
-    public boolean isSnake(Point2D p) {
-        return p.equals(this.head) || p.equals(this.tail) || isSnakeBody(p);
+    public boolean isSnake(Point2D point) {
+        return point.equals(this.head) || point.equals(this.tail) || isSnakeBody(point);
+    }
+
+    public boolean isSnakeHead(Point2D point) {
+        return point.equals(this.head);
     }
 
     @Override
@@ -124,7 +130,7 @@ public final class Snake implements Serializable {
         if (this == object) {
             return true;
         }
-        if (object == null || getClass() != object.getClass()) {
+        if (!(object instanceof Snake)) {
             return false;
         }
         Snake other = (Snake) object;

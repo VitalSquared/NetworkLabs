@@ -10,8 +10,7 @@ import java.util.Objects;
 @RequiredArgsConstructor
 public final class MessageOwner {
     private final @Getter Message message;
-    private final @Getter
-    NetNode owner;
+    private final @Getter NetNode owner;
 
     @Override
     public boolean equals(Object object) {

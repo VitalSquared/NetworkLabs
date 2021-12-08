@@ -50,7 +50,7 @@ public final class ActiveGameButton {
         if (this == object) {
             return true;
         }
-        if (object == null || getClass() != object.getClass()) {
+        if (!(object instanceof ActiveGameButton)) {
             return false;
         }
         ActiveGameButton other = (ActiveGameButton) object;
