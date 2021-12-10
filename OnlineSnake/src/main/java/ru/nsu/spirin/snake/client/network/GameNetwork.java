@@ -26,7 +26,6 @@ import ru.nsu.spirin.snake.server.ServerHandler;
 import ru.nsu.spirin.snake.utils.StateUtils;
 
 import java.io.IOException;
-import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.NetworkInterface;
 import java.time.Duration;
@@ -87,12 +86,12 @@ public final class GameNetwork implements NetworkHandler {
             this.activeServerGame = new ServerGame(
                     this.config,
                     this.multicastInfo,
-                    InetAddress.getLocalHost(),
+                    this.rdtSocket.getAddress(),
                     this.rdtSocket.getLocalPort(),
                     this.playerName,
                     this.networkInterface
             );
-            this.master = new NetNode(InetAddress.getLocalHost(), this.activeServerGame.getPort());
+            this.master = new NetNode(this.rdtSocket.getAddress(), this.activeServerGame.getPort());
             this.masterLastSeen = Instant.now();
             this.gameState = null;
             changeNodeRole(NodeRole.MASTER);
@@ -251,7 +250,7 @@ public final class GameNetwork implements NetworkHandler {
     private void swapToMaster()  {
         try {
             this.activeServerGame = new ServerGame(this.gameState, this.multicastInfo, this.networkInterface);
-            this.master = new NetNode(InetAddress.getLocalHost(), this.activeServerGame.getPort());
+            this.master = new NetNode(this.rdtSocket.getAddress(), this.activeServerGame.getPort());
             this.deputy = null;
             this.masterID = this.playerID;
             this.deputyID = -1;
@@ -311,7 +310,9 @@ public final class GameNetwork implements NetworkHandler {
             @Override
             public void handle(NetNode sender, StateMessage stateMsg) {
                 if (master != null && !sender.equals(master)) {
-                    logger.info("Received state from somewhere else");
+                    logger.info("Received state from somewhere else: " +
+                                "MASTER=" + master +
+                                ", SENDER=" + sender);
                     return;
                 }
 
@@ -333,6 +334,7 @@ public final class GameNetwork implements NetworkHandler {
                     deputyID = deputyPlayer.getId();
                 }
                 gameState = newState;
+                view.setMyPlayer(new NetNode(rdtSocket.getAddress(), rdtSocket.getLocalPort()));
                 view.updateCurrentGame(newState);
             }
 
@@ -344,7 +346,6 @@ public final class GameNetwork implements NetworkHandler {
             @Override
             public void handle(NetNode sender, RoleChangeMessage roleChangeMsg) {
                 switch (nodeRole) {
-                    case MASTER -> logger.info("MASTER"); //shouldn't happen
                     case DEPUTY -> {
                         if (roleChangeMsg.getSenderRole() == NodeRole.MASTER && roleChangeMsg.getReceiverRole() == NodeRole.MASTER) {
                             swapToMaster();
@@ -371,7 +372,9 @@ public final class GameNetwork implements NetworkHandler {
                             lose();
                         }
                     }
-                    case VIEWER -> logger.info("VIEWER");
+                    default -> logger.error("Received role change message: me=" + nodeRole +
+                                        ", senderRole=" + roleChangeMsg.getSenderRole() +
+                                        ", receiverRole=" + roleChangeMsg.getReceiverRole());
                 }
             }
         };

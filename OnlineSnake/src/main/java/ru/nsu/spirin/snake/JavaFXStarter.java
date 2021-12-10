@@ -79,5 +79,6 @@ public final class JavaFXStarter extends Application {
         if (null != this.gameNetwork) {
             this.gameNetwork.exit();
         }
+        System.exit(0);
     }
 }

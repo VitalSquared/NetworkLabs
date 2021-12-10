@@ -11,8 +11,8 @@ import ru.nsu.spirin.snake.messages.messages.MessageType;
 
 import java.io.IOException;
 import java.net.DatagramPacket;
+import java.net.DatagramSocket;
 import java.net.InetAddress;
-import java.net.InetSocketAddress;
 import java.net.MulticastSocket;
 import java.net.NetworkInterface;
 import java.time.Instant;
@@ -25,7 +25,8 @@ import java.util.TimerTask;
 public final class GameSocket implements RDTSocket {
     private static final Logger logger = Logger.getLogger(GameSocket.class);
 
-    private final MulticastSocket socket;
+    private final DatagramSocket socket;
+    private final NetworkInterface networkInterface;
     private final int sendDelayMs;
 
     private final Map<Long, Message> responses = new HashMap<>();
@@ -37,8 +38,8 @@ public final class GameSocket implements RDTSocket {
 
     public GameSocket(NetworkInterface networkInterface, int sendDelayMs) throws IOException {
         this.socket = new MulticastSocket();
-        this.socket.setNetworkInterface(networkInterface);
         this.sendDelayMs = sendDelayMs;
+        this.networkInterface = networkInterface;
     }
 
     @Override
@@ -61,7 +62,7 @@ public final class GameSocket implements RDTSocket {
 
     @Override
     public InetAddress getAddress() {
-        return this.socket.getLocalAddress();
+        return this.networkInterface.getInetAddresses().nextElement();
     }
 
     @Override

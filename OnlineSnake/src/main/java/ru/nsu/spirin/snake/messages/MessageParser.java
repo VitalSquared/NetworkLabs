@@ -2,7 +2,6 @@ package ru.nsu.spirin.snake.messages;
 
 import com.google.protobuf.InvalidProtocolBufferException;
 import lombok.experimental.UtilityClass;
-import me.ippolitov.fit.snakes.SnakesProto;
 import me.ippolitov.fit.snakes.SnakesProto.GameMessage;
 import org.apache.commons.lang3.SerializationException;
 import org.apache.log4j.Logger;
@@ -41,8 +40,8 @@ public final class MessageParser {
         GameMessage message = GameMessage.parseFrom(Arrays.copyOf(packet.getData(), packet.getLength()));
         validate(message.hasMsgSeq(), "No message sequence");
         if (message.hasAck()) {
-            //validate(message.hasSenderId(), "No sender id");
-            //validate(message.hasReceiverId(), "No receiver id");
+            validate(message.hasSenderId(), "No sender id");
+            validate(message.hasReceiverId(), "No receiver id");
             return new AckMessage(
                     message.getMsgSeq(),
                     message.getSenderId(),
@@ -63,8 +62,8 @@ public final class MessageParser {
             return new ErrorMessage(
                     message.getError().getErrorMessage(),
                     message.getMsgSeq(),
-                    message.getSenderId(),
-                    message.getReceiverId()
+                    message.hasSenderId() ? message.getSenderId() : -1,
+                    message.hasReceiverId() ? message.getReceiverId() : -1
             );
         }
         else if (message.hasJoin()) {
@@ -75,7 +74,11 @@ public final class MessageParser {
             );
         }
         else if (message.hasPing()) {
-            return new PingMessage(message.getMsgSeq(), message.getSenderId(), message.getReceiverId());
+            return new PingMessage(
+                    message.getMsgSeq(),
+                    message.hasSenderId() ? message.getSenderId() : -1,
+                    message.hasReceiverId() ? message.getReceiverId() : -1
+            );
         }
         else if (message.hasRoleChange()) {
             validate(message.getRoleChange().hasSenderRole(), "No sender role");
@@ -86,8 +89,8 @@ public final class MessageParser {
                     message.getRoleChange().getSenderRole(),
                     message.getRoleChange().getReceiverRole(),
                     message.getMsgSeq(),
-                    message.getSenderId(),
-                    message.getReceiverId()
+                    message.hasSenderId() ? message.getSenderId() : -1,
+                    message.hasReceiverId() ? message.getReceiverId() : -1
             );
         }
         else if (message.hasState()) {
@@ -99,8 +102,8 @@ public final class MessageParser {
             return new StateMessage(
                     state,
                     message.getMsgSeq(),
-                    message.getSenderId(),
-                    message.getReceiverId()
+                    message.hasSenderId() ? message.getSenderId() : -1,
+                    message.hasReceiverId() ? message.getReceiverId() : -1
             );
         }
         else if (message.hasSteer()) {
@@ -108,8 +111,8 @@ public final class MessageParser {
             return new SteerMessage(
                     message.getSteer().getDirection(),
                     message.getMsgSeq(),
-                    message.getSenderId(),
-                    message.getReceiverId()
+                    message.hasSenderId() ? message.getSenderId() : -1,
+                    message.hasReceiverId() ? message.getReceiverId() : -1
             );
         }
         else {

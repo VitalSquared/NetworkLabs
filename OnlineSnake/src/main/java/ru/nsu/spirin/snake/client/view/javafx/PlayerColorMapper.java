@@ -2,6 +2,7 @@ package ru.nsu.spirin.snake.client.view.javafx;
 
 import javafx.scene.paint.Color;
 import org.jetbrains.annotations.NotNull;
+import ru.nsu.spirin.snake.datatransfer.NetNode;
 import ru.nsu.spirin.snake.gamehandler.Player;
 
 import java.util.*;
@@ -12,12 +13,12 @@ public final class PlayerColorMapper {
 
     private static final List<Color> snakeColors = List.of(
             Color.RED,
-            Color.BLUE,
             Color.ORANGE,
             Color.PURPLE
     );
 
     private static final Color ZOMBIE_SNAKE_COLOR = Color.BLACK;
+    private static final Color MY_SNAKE_COLOR = Color.BLUE;
 
     public PlayerColorMapper() {
         this.playerColors = new HashMap<>();
@@ -25,7 +26,12 @@ public final class PlayerColorMapper {
     }
 
     @NotNull
-    public Optional<Color> getColor(@NotNull Player player) {
+    public Optional<Color> getColor(@NotNull Player player, NetNode self) {
+        if (self != null) {
+            if (player.getNetNode().equals(self)) {
+                return Optional.of(MY_SNAKE_COLOR);
+            }
+        }
         return Optional.ofNullable(this.playerColors.get(player));
     }
 

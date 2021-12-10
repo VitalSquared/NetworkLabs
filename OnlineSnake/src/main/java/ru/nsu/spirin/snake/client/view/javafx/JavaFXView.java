@@ -21,6 +21,7 @@ import me.ippolitov.fit.snakes.SnakesProto;
 import me.ippolitov.fit.snakes.SnakesProto.Direction;
 import me.ippolitov.fit.snakes.SnakesProto.GameConfig;
 import org.jetbrains.annotations.NotNull;
+import ru.nsu.spirin.snake.datatransfer.NetNode;
 import ru.nsu.spirin.snake.gamehandler.GameState;
 import ru.nsu.spirin.snake.gamehandler.Player;
 import ru.nsu.spirin.snake.gamehandler.Snake;
@@ -69,6 +70,7 @@ public final class JavaFXView implements GameView {
     private final Set<ActiveGameButton> activeGameButtons = new HashSet<>();
     private final PlayerColorMapper colorMapper = new PlayerColorMapper();
 
+    private NetNode myPlayer = null;
     private Rectangle[][] fieldCells;
     private Stage stage;
     private GameConfig gameConfig;
@@ -130,6 +132,11 @@ public final class JavaFXView implements GameView {
         this.gameInfoObservableList.setAll(this.activeGameButtons);
     }
 
+    @Override
+    public void setMyPlayer(NetNode self) {
+        this.myPlayer = self;
+    }
+
     private void initPlayersInfoTable() {
         this.playersRankingTable.setItems(this.playersObservableList);
         this.playerNameColumn.setCellValueFactory(new PropertyValueFactory<>("name"));
@@ -153,7 +160,7 @@ public final class JavaFXView implements GameView {
     private void close(boolean closeStage) {
         if (closeStage) {
             if (null == this.stage) {
-                throw new IllegalStateException("Cant close not initialized stage");
+                throw new IllegalStateException("Cant close uninitialized stage");
             }
             this.stage.close();
         }
@@ -166,9 +173,12 @@ public final class JavaFXView implements GameView {
             this.gameOwner.setText("");
         });
         this.playersObservableList.clear();
-        for (int row = 0; row < gameConfig.getHeight(); row++) {
-            for (int col = 0; col < gameConfig.getWidth(); col++) {
-                this.fieldCells[row][col].setFill(EMPTY_CELL_COLOR);
+
+        if (this.gameConfig != null && this.fieldCells != null) {
+            for (int row = 0; row < gameConfig.getHeight(); row++) {
+                for (int col = 0; col < gameConfig.getWidth(); col++) {
+                    this.fieldCells[row][col].setFill(EMPTY_CELL_COLOR);
+                }
             }
         }
     }
@@ -229,7 +239,10 @@ public final class JavaFXView implements GameView {
                 snakes.put(snake, this.colorMapper.getZombieSnakeColor());
                 continue;
             }
-            Color playerColor = this.colorMapper.getColor(Optional.ofNullable(PlayerUtils.findPlayerBySnake(snake, state.getActivePlayers())).orElseThrow()).orElseThrow(() -> new NoSuchElementException("Color map doesn't contain player"));
+            Color playerColor = this.colorMapper.getColor(
+                        Optional.ofNullable(PlayerUtils.findPlayerBySnake(snake, state.getActivePlayers())).orElseThrow(),
+                        this.myPlayer
+                    ).orElseThrow(() -> new NoSuchElementException("Color map doesn't contain player"));
             snakes.put(snake, playerColor);
         }
         return snakes;
