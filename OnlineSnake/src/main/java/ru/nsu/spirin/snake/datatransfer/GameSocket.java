@@ -13,7 +13,6 @@ import java.io.IOException;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
-import java.net.MulticastSocket;
 import java.net.NetworkInterface;
 import java.time.Instant;
 import java.util.HashMap;
@@ -37,7 +36,7 @@ public final class GameSocket implements RDTSocket {
     private Timer timer = new Timer();
 
     public GameSocket(NetworkInterface networkInterface, int sendDelayMs) throws IOException {
-        this.socket = new MulticastSocket();
+        this.socket = new DatagramSocket();
         this.sendDelayMs = sendDelayMs;
         this.networkInterface = networkInterface;
     }

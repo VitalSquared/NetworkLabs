@@ -21,6 +21,7 @@ import ru.nsu.spirin.snake.datatransfer.NetNode;
 import ru.nsu.spirin.snake.messages.messages.JoinMessage;
 import ru.nsu.spirin.snake.messages.messages.Message;
 import ru.nsu.spirin.snake.messages.messages.PingMessage;
+import ru.nsu.spirin.snake.multicastreceiver.GameInfo;
 import ru.nsu.spirin.snake.server.ServerGame;
 import ru.nsu.spirin.snake.server.ServerHandler;
 import ru.nsu.spirin.snake.utils.StateUtils;
@@ -67,6 +68,7 @@ public final class GameNetwork implements NetworkHandler {
     private long currentSteerMessageSeq = -1;
     private Direction curDirection = null;
     private Thread receiveThread = null;
+    private boolean anyGamesOnLocalhost = false;
 
     public GameNetwork(GameConfig config, String playerName, GameView view, InetSocketAddress multicastInfo, NetworkInterface networkInterface) throws IOException {
         this.rdtSocket = new GameSocket(networkInterface, config.getPingDelayMs());
@@ -79,6 +81,11 @@ public final class GameNetwork implements NetworkHandler {
 
     @Override
     public void startNewGame() {
+        if (this.anyGamesOnLocalhost) {
+            logger.info("You have a server running on localhost. Shut it down and try again.");
+            return;
+        }
+
         stopCurrentServerGame();
         rdtSocket.stop();
         rdtSocket.start();
@@ -163,6 +170,17 @@ public final class GameNetwork implements NetworkHandler {
             this.receiveThread = null;
         }
         stopCurrentServerGame();
+    }
+
+    @Override
+    public void updateActiveGames(Set<GameInfo> gameInfos) {
+        for (var game : gameInfos) {
+            if (game.getMasterNode().getAddress().equals(this.rdtSocket.getAddress())) {
+                this.anyGamesOnLocalhost = true;
+                return;
+            }
+        }
+        this.anyGamesOnLocalhost = false;
     }
 
     private void stopCurrentServerGame() {

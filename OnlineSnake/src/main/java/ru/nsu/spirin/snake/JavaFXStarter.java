@@ -54,7 +54,7 @@ public final class JavaFXStarter extends Application {
             this.gameNetwork = new GameNetwork(config, playerName, view, multicastInfo, networkInterface);
             JavaFXController gameController = new JavaFXController(config, playerName, this.gameNetwork, view);
 
-            this.multicastReceiver = new MulticastReceiver(multicastInfo, view, networkInterface);
+            this.multicastReceiver = new MulticastReceiver(multicastInfo, view, this.gameNetwork, networkInterface);
             this.multicastReceiver.start();
 
             view.setStage(stage);

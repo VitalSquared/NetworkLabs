@@ -1,6 +1,7 @@
 package ru.nsu.spirin.snake.multicastreceiver;
 
 import org.apache.log4j.Logger;
+import ru.nsu.spirin.snake.client.network.GameNetwork;
 import ru.nsu.spirin.snake.client.view.GameView;
 import ru.nsu.spirin.snake.messages.MessageParser;
 import ru.nsu.spirin.snake.messages.messages.Message;
@@ -26,17 +27,19 @@ public final class MulticastReceiver {
     private static final int SO_TIMEOUT_MS = 3000;
 
     private final GameView view;
+    private final GameNetwork network;
     private final InetSocketAddress multicastInfo;
     private final NetworkInterface networkInterface;
     private final Thread checkerThread;
 
     private final Map<GameInfo, Instant> gameInfos = new HashMap<>();
 
-    public MulticastReceiver(InetSocketAddress multicastInfo, GameView view, NetworkInterface networkInterface) {
+    public MulticastReceiver(InetSocketAddress multicastInfo, GameView view, GameNetwork network, NetworkInterface networkInterface) {
         validateAddress(multicastInfo.getAddress());
         this.multicastInfo = multicastInfo;
         this.networkInterface = networkInterface;
         this.view = view;
+        this.network = network;
         this.checkerThread = new Thread(getCheckerRunnable());
     }
 
@@ -82,6 +85,7 @@ public final class MulticastReceiver {
                     }
 
                     this.gameInfos.entrySet().removeIf(entry -> Duration.between(entry.getValue(), Instant.now()).abs().toMillis() >= SO_TIMEOUT_MS);
+                    this.network.updateActiveGames(this.gameInfos.keySet());
                     this.view.updateGameList(this.gameInfos.keySet());
                 }
                 socket.leaveGroup(this.multicastInfo, this.networkInterface);

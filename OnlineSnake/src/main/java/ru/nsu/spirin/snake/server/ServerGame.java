@@ -261,9 +261,9 @@ public final class ServerGame implements ServerHandler {
 
     private boolean validateNewPlayer(NetNode sender, JoinMessage joinMsg) {
         if (this.playersLastSeen.keySet().stream().anyMatch(player -> player.getName().equals(joinMsg.getPlayerName()))) {
-            logger.error("Node=" + sender + " already registered as player");
+            logger.error("Node=" + sender + ": " + "Player with name '" + joinMsg.getPlayerName() + "' already registered as player");
             this.socket.sendWithoutConfirm(
-                    new ErrorMessage("Player already exist", joinMsg.getMessageSequence(), masterPlayer.getId(), -1),
+                    new ErrorMessage("Player with name already exist", joinMsg.getMessageSequence(), masterPlayer.getId(), -1),
                     sender
             );
             return false;
