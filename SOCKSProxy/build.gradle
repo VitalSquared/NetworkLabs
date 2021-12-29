@@ -1,0 +1,30 @@
+plugins {
+    id 'java'
+    id 'application'
+}
+
+sourceCompatibility = 14
+targetCompatibility = 14
+
+group 'ru.nsu.spirin'
+version '1.0-SNAPSHOT'
+
+application {
+    mainClassName = 'ru.nsu.spirin.proxy.Main'
+}
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    implementation 'org.jetbrains:annotations:22.0.0'
+    implementation 'org.projectlombok:lombok:1.18.22'
+    compile group: 'dnsjava', name: 'dnsjava', version: '2.1.1'
+    annotationProcessor 'org.projectlombok:lombok:1.18.22'
+    implementation 'log4j:log4j:1.2.17'
+}
+
+test {
+    useJUnitPlatform()
+}
